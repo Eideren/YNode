@@ -53,9 +53,9 @@ namespace YNode.Editor
             ControlsPreDraw();
             DrawGrid(position, Zoom, PanOffset);
             DrawConnections();
-            DrawDraggedConnection();
+            CurrentActivity?.PreNodeDraw();
             DrawNodes();
-            DrawSelectionBox();
+            CurrentActivity?.PostNodeDraw();
             DrawTooltip();
             OnGUIOverlay();
             ControlsPostDraw();
@@ -142,19 +142,6 @@ namespace YNode.Editor
             // Draw tiled background
             GUI.DrawTextureWithTexCoords(rect, gridTex, new Rect(tileOffset, tileAmount));
             GUI.DrawTextureWithTexCoords(rect, crossTex, new Rect(tileOffset + new Vector2(0.5f, 0.5f), tileAmount));
-        }
-
-        private void DrawSelectionBox()
-        {
-            if (CurrentActivity == NodeActivity.BoxSelect)
-            {
-                Vector2 curPos = WindowToGridPosition(Event.current.mousePosition);
-                Vector2 size = curPos - _dragBoxStart;
-                Rect r = new Rect(_dragBoxStart, size);
-                r.position = GridToWindowPosition(r.position);
-                r.size /= Zoom;
-                Handles.DrawSolidRectangleWithOutline(r, new Color(0, 0, 0, 0.1f), new Color(1, 1, 1, 0.6f));
-            }
         }
 
         /// <summary> Show right-click context menu for hovered reroute </summary>
@@ -430,7 +417,6 @@ namespace YNode.Editor
         public void DrawConnections()
         {
             Vector2 mousePos = Event.current.mousePosition;
-            List<ReroutePoint> selection = new List<ReroutePoint>(_preBoxSelectionReroute);
             _hoveredReroute = null;
 
             if (Event.current.type == EventType.Layout)
@@ -505,8 +491,7 @@ namespace YNode.Editor
                                 {
                                     ReroutePoint rerouteRef = new ReroutePoint(port, i);
                                     // Draw reroute point at position
-                                    Rect rect = new Rect(reroutePoints[i], new Vector2(12, 12));
-                                    rect.position = new Vector2(rect.position.x - 6, rect.position.y - 6);
+                                    Rect rect = rerouteRef.GetRect();
                                     rect = GridToWindowRect(rect);
 
                                     // Draw selected reroute points with an outline
@@ -518,8 +503,6 @@ namespace YNode.Editor
 
                                     GUI.color = portColor;
                                     GUI.DrawTexture(rect, portStyle.active.background);
-                                    if (rect.Overlaps(_selectionBox))
-                                        selection.Add(rerouteRef);
                                     if (rect.Contains(mousePos))
                                         _hoveredReroute = rerouteRef;
                                 }
@@ -532,11 +515,9 @@ namespace YNode.Editor
             }
 
             GUI.color = col;
-            if (Event.current.type != EventType.Layout && CurrentActivity == NodeActivity.BoxSelect)
-                _selectedReroutes = selection;
         }
 
-        private Rect DrawArrow(IO io, Vector2 point, Color color)
+        public Rect DrawArrow(IO io, Vector2 point, Color color)
         {
             bool isInput = io == IO.Input;
             Texture icon = isInput ? EditorIcons.TriangleLeft.Active : EditorIcons.TriangleRight.Active;
@@ -568,29 +549,8 @@ namespace YNode.Editor
                 _hoveredNode = null;
             }
 
-            var preSelection = new List<Object>(_preBoxSelection);
-
-            // Selection box stuff
-            Vector2 boxStartPos = GridToWindowPositionNoClipped(_dragBoxStart);
-            Vector2 boxSize = mousePos - boxStartPos;
-            if (boxSize.x < 0)
-            {
-                boxStartPos.x += boxSize.x;
-                boxSize.x = Mathf.Abs(boxSize.x);
-            }
-
-            if (boxSize.y < 0)
-            {
-                boxStartPos.y += boxSize.y;
-                boxSize.y = Mathf.Abs(boxSize.y);
-            }
-
-            Rect selectionBox = new Rect(boxStartPos, boxSize);
-
             //Save guiColor so we can revert it
             Color guiColor = GUI.color;
-
-            List<Port> removeEntries = new List<Port>();
 
             if (e.type == EventType.Layout)
             {
@@ -649,7 +609,7 @@ namespace YNode.Editor
                 if (_stickyEditors.Contains(editor))
                     continue;
 
-                DrawNodeEditor(e, editor, false, removeEntries, guiColor, mousePos, selectionBox, preSelection);
+                DrawNodeEditor(e, editor, false, guiColor, mousePos);
             }
 
             if (_stickyEditors.Count > 0)
@@ -662,14 +622,12 @@ namespace YNode.Editor
 
             foreach (var editor in _stickyEditors)
             {
-                DrawNodeEditor(e, editor, true, removeEntries, guiColor, mousePos, selectionBox, preSelection);
+                DrawNodeEditor(e, editor, true, guiColor, mousePos);
             }
 
             if (EditorGUI.EndChangeCheck())
                 Undo.FlushUndoRecordObjects();
 
-            if (e.type == EventType.Repaint && CurrentActivity == NodeActivity.BoxSelect)
-                Selection.objects = preSelection.ToArray();
             EndZoomed(position, Zoom, TopPadding);
         }
 
@@ -686,10 +644,10 @@ namespace YNode.Editor
             {
                 Vector2 size = nodeEditor.CachedSize;
                 Vector2 max = nodePos + size;
-                if (max.x > this.position.size.x*_zoom)
-                    nodePos.x = this.position.size.x*_zoom - size.x;
-                if (max.y > this.position.size.y*_zoom)
-                    nodePos.y = this.position.size.y*_zoom - size.y;
+                if (max.x > position.size.x*_zoom)
+                    nodePos.x = position.size.x*_zoom - size.x;
+                if (max.y > position.size.y*_zoom)
+                    nodePos.y = position.size.y*_zoom - size.y;
             }
             return nodePos;
         }
@@ -699,8 +657,8 @@ namespace YNode.Editor
             return GetStickyWindowPosition(nodeEditor) - (position.size * (0.5f * Zoom) + PanOffset);
         }
 
-        private void DrawNodeEditor(Event e, NodeEditor nodeEditor, bool sticky, List<Port> removeEntries,
-            Color guiColor, Vector2 mousePos, Rect selectionBox, List<Object> preSelection)
+        private void DrawNodeEditor(Event e, NodeEditor nodeEditor, bool sticky,
+            Color guiColor, Vector2 mousePos)
         {
             // Culling
             if (e.type == EventType.Layout)
@@ -717,7 +675,6 @@ namespace YNode.Editor
 
             if (e.type == EventType.Repaint)
             {
-                removeEntries.Clear();
                 foreach (var (_, port) in nodeEditor.Ports)
                     port.CachedRect = default;
             }
@@ -737,17 +694,18 @@ namespace YNode.Editor
                 {
                     Vector2 size = nodeEditor.CachedSize;
                     Vector2 max = nodePos + size;
-                    if (max.x > this.position.size.x*_zoom)
-                        nodePos.x = this.position.size.x*_zoom - size.x;
-                    if (max.y > this.position.size.y*_zoom)
-                        nodePos.y = this.position.size.y*_zoom - size.y;
+                    if (max.x > position.size.x*_zoom)
+                        nodePos.x = position.size.x*_zoom - size.x;
+                    if (max.y > position.size.y*_zoom)
+                        nodePos.y = position.size.y*_zoom - size.y;
                 }
             }
 
             GUILayout.BeginArea(new Rect(nodePos, new Vector2(nodeEditor.GetWidth(), 4000)));
 
             bool highlighted = Selection.objects.Contains(nodeEditor);
-            highlighted |= _draggedPort?.CanConnectTo(nodeEditor.Value.GetType()) == true;
+            var draggedPort = (this.CurrentActivity as ConnectPortActivity)?.Port;
+            highlighted |= draggedPort?.CanConnectTo(nodeEditor.Value.GetType()) == true;
 
             GUIStyle verticalStyle;
             if (highlighted)
@@ -809,21 +767,15 @@ namespace YNode.Editor
             {
                 //Check if we are hovering this node
                 Vector2 nodeSize = GUILayoutUtility.GetLastRect().size;
-                Rect windowRect = new Rect(nodePos, nodeSize);
-                if (windowRect.Contains(mousePos))
+                Rect nodeRect = new Rect(nodePos, nodeSize);
+                if (nodeRect.Contains(mousePos) && nodeEditor.HitTest(nodeRect, mousePos))
                     _hoveredNode = nodeEditor;
-
-                //If dragging a selection box, add nodes inside to selection
-                if (e.type == EventType.Repaint && CurrentActivity == NodeActivity.BoxSelect && windowRect.Overlaps(selectionBox))
-                {
-                    preSelection.Add(nodeEditor);
-                }
             }
 
             GUILayout.EndArea();
         }
 
-        private bool ShouldBeCulled(NodeEditor nodeEditor)
+        public bool ShouldBeCulled(NodeEditor nodeEditor)
         {
             if (_firstRun)
                 return false;
@@ -842,7 +794,7 @@ namespace YNode.Editor
             return false;
         }
 
-        private bool ShouldBeCulled(Rect rect)
+        public bool ShouldBeCulled(Rect rect)
         {
             if (_firstRun)
                 return false;
@@ -852,7 +804,7 @@ namespace YNode.Editor
             return rect.Overlaps(screenRect) == false;
         }
 
-        private void DrawTooltip()
+        public void DrawTooltip()
         {
             if (!Preferences.GetSettings().PortTooltips)
                 return;
@@ -884,7 +836,7 @@ namespace YNode.Editor
         /// <param name="typeColor"></param>
         /// <param name="border">texture for border of the dot port</param>
         /// <param name="dot">texture for the dot port</param>
-        private void DrawPortHandle(Rect rect, Color backgroundColor, Color typeColor, Texture2D border, Texture2D dot)
+        public void DrawPortHandle(Rect rect, Color backgroundColor, Color typeColor, Texture2D border, Texture2D dot)
         {
             if (Event.current.type != EventType.Repaint)
                 return;

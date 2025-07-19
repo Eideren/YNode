@@ -11,18 +11,20 @@ namespace YNode.Editor
     [Serializable]
     public class NodeEditor : ScriptableObject
     {
+        private string? _title;
+        private Dictionary<string, Port> _ports = new();
+
         [SkipPolymorphicField, SerializeReference, HideLabel, InlineProperty, ShowInInspector]
         public INodeValue Value = null!;
+
+        /// <summary> Size in grid space </summary>
+        [NonSerialized] public Vector2 CachedSize;
 
         [NonSerialized] public SerializedObject SerializedObject = null!;
         [NonSerialized] public PropertyTree ObjectTree = null!;
         [NonSerialized] public GraphWindow Window = null!;
         public Dictionary<string, List<Vector2>> ReroutePoints = new();
 
-        private Dictionary<string, Port> _ports = new();
-
-        public Vector2 CachedSize { get; set; }
-        private string? _title;
         public NodeGraph Graph => Window.Graph;
 
         /// <summary> Iterate over all ports on this node. </summary>
@@ -40,7 +42,7 @@ namespace YNode.Editor
                 return _ports[fieldName];
             }
 
-            Port port = new Port(fieldName, this, type, direction, getConnected, canConnectTo, setConnection, stroke, tooltip);
+            var port = new Port(fieldName, this, type, direction, getConnected, canConnectTo, setConnection, stroke, tooltip);
             _ports.Add(fieldName, port);
             return port;
         }
@@ -128,6 +130,11 @@ namespace YNode.Editor
         {
             Type type = Value.GetType();
             return type.TryGetAttributeWidth(out var width) ? width : NodeWidthAttribute.Default;
+        }
+
+        public virtual bool HitTest(Rect rect, Vector2 mousePosition)
+        {
+            return rect.Contains(mousePosition);
         }
 
         /// <summary> Returns color for target node </summary>
