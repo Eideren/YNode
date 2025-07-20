@@ -40,6 +40,7 @@ namespace YNode.Editor
             wantsMouseMove = true;
             Event e = Event.current;
             CurrentActivity?.InputPostDraw(e);
+            HandleNodeMapInput();
             switch (e.type)
             {
                 case EventType.DragUpdated:

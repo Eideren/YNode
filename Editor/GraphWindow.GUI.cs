@@ -56,6 +56,7 @@ namespace YNode.Editor
             CurrentActivity?.PreNodeDraw();
             DrawNodes();
             CurrentActivity?.PostNodeDraw();
+            DrawNodeMap();
             DrawTooltip();
             OnGUIOverlay();
             ControlsPostDraw();
@@ -852,6 +853,87 @@ namespace YNode.Editor
             GUI.color = typeColor;
             GUI.DrawTexture(rect, dot);
             GUI.color = col;
+        }
+
+        protected virtual Rect NodeMap => new Rect(position.size - new Vector2(100, 100), new Vector2(100, 100));
+
+        public void HandleNodeMapInput()
+        {
+            if (NodeMap.size == default)
+                return;
+
+            var e = Event.current;
+            switch (e.type)
+            {
+                case EventType.MouseDown when CurrentActivity is null && NodeMap.Contains(e.mousePosition):
+                case EventType.MouseDrag when CurrentActivity is null && NodeMap.Contains(e.mousePosition):
+                    e.Use();
+                    CurrentActivity = new NodeMapDragActivity(this);
+                    break;
+            }
+        }
+
+        public void DrawNodeMap()
+        {
+            if (NodeMap.size == default)
+                return;
+
+            var backgroundRect = NodeMap;
+            float alpha = backgroundRect.Contains(Event.current.mousePosition) ? 1f : 0.25f;
+
+            var previousColor = GUI.color;
+            GUI.color = new Color(0.1f,0.1f,0.1f, alpha);
+            GUI.DrawTexture(backgroundRect, Texture2D.whiteTexture);
+
+            Vector2 rangeMin = Vector2.positiveInfinity, rangeMax = Vector2.negativeInfinity;
+            foreach (var (node, editor) in _nodesToEditor)
+            {
+                rangeMin = Vector2.Min(node.Position, rangeMin);
+                rangeMax = Vector2.Max(node.Position + editor.CachedSize, rangeMax);
+            }
+
+            var rangeSize = rangeMax - rangeMin;
+            var centeredRect = backgroundRect;
+            centeredRect.y += backgroundRect.height * (1f - rangeSize.y / rangeSize.x) * 0.5f;
+            rangeSize.y *= rangeSize.x / rangeSize.y; // We don't want to stretch across our entire available space, use aspect ratio
+            foreach (var (node, editor) in _nodesToEditor)
+            {
+                GUI.color = editor.GetTint() * new Color(1,1,1,alpha);
+                Rect rectForThisNode = FitInBackground(node.Position, editor.CachedSize, rangeMin, rangeSize, centeredRect);
+                GUI.DrawTexture(rectForThisNode, Texture2D.whiteTexture);
+            }
+
+            var viewportMin = WindowToGridPosition(default);
+            var viewportMax = WindowToGridPosition(position.size);
+            var viewportRect = FitInBackground(viewportMin, viewportMax - viewportMin, rangeMin, rangeSize, centeredRect);
+            viewportRect.min = Vector2.Max(viewportRect.min, backgroundRect.min); // Make sure it doesn't go outside the window
+            viewportRect.max = Vector2.Min(viewportRect.max, backgroundRect.max);
+            GUI.color = new Color(0.5f, 0.5f, 0.5f, 0.2f*alpha);
+            GUI.DrawTexture(viewportRect, Texture2D.whiteTexture);
+
+            GUI.color = previousColor;
+            var e = Event.current;
+            switch (e.type)
+            {
+                case EventType.MouseDown when CurrentActivity is NodeMapDragActivity && backgroundRect.Contains(e.mousePosition):
+                case EventType.MouseDrag when CurrentActivity is NodeMapDragActivity && backgroundRect.Contains(e.mousePosition):
+                    var normalizedMousePosition = e.mousePosition;
+                    normalizedMousePosition -= centeredRect.min;
+                    normalizedMousePosition /= (centeredRect.max - centeredRect.min);
+                    PanOffset = -(rangeMin + rangeSize * normalizedMousePosition);
+                    break;
+            }
+
+            static Rect FitInBackground(in Vector2 position, in Vector2 size, in Vector2 rangeMin, in Vector2 rangeSize, in Rect backgroundRect)
+            {
+                var normalizedMin = (position - rangeMin) / rangeSize;
+                var normalizedMax = ((position + size) - rangeMin) / rangeSize;
+
+                Rect rectForThisNode = backgroundRect;
+                rectForThisNode.min = backgroundRect.min + backgroundRect.size * normalizedMin;
+                rectForThisNode.max = backgroundRect.min + backgroundRect.size * normalizedMax;
+                return rectForThisNode;
+            }
         }
     }
 }

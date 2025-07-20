@@ -412,4 +412,25 @@ namespace YNode.Editor
             Selection.objects = _selectedEditors.ToArray();
         }
     }
+
+    public class NodeMapDragActivity : NodeActivity
+    {
+        public NodeMapDragActivity(GraphWindow window) : base(window)
+        {
+        }
+
+        public override void InputPreDraw(Event e)
+        {
+            if (e.type == EventType.MouseUp)
+            {
+                Window.CurrentActivity = null;
+            }
+        }
+
+        public override void PreNodeDraw() { }
+
+        public override void PostNodeDraw() { }
+
+        public override void InputPostDraw(Event e) { }
+    }
 }
