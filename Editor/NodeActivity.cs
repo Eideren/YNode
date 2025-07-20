@@ -193,12 +193,6 @@ namespace YNode.Editor
         {
             switch (e.type)
             {
-                case EventType.MouseUp when e.button == 0:
-                    Window.CurrentActivity = null;
-                    e.Use();
-
-                    break;
-
                 case EventType.MouseDrag when e.button == 0:
 
                     // Holding ctrl inverts grid snap
@@ -264,6 +258,13 @@ namespace YNode.Editor
 
         public override void InputPostDraw(Event e)
         {
+            switch (e.type)
+            {
+                case EventType.MouseUp when e.button == 0:
+                    Window.CurrentActivity = null;
+                    e.Use();
+                    break;
+            }
         }
     }
 
