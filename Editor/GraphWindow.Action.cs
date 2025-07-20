@@ -384,7 +384,7 @@ namespace YNode.Editor
             //Get node position
             Vector2 nodePos = GridToWindowPosition(nodeEditor.Value.Position);
             float width = nodeEditor.CachedSize.x == 0 ? 200 : nodeEditor.CachedSize.x;
-            Rect windowRect = new Rect(nodePos, new Vector2(width / Zoom, 30 / Zoom));
+            var windowRect = new Rect(nodePos, new Vector2(width / Zoom, NodeEditor.TitleHeight / Zoom));
             return windowRect.Contains(mousePos);
         }
 

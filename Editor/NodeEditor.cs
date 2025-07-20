@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Reflection;
 using Sirenix.OdinInspector;
 using Sirenix.OdinInspector.Editor;
 using Sirenix.Utilities.Editor;
@@ -11,6 +12,8 @@ namespace YNode.Editor
     [Serializable]
     public class NodeEditor : ScriptableObject
     {
+        public const int TitleHeight = 30;
+
         private string? _title;
         private Dictionary<string, Port> _ports = new();
 
@@ -85,7 +88,7 @@ namespace YNode.Editor
         public virtual void OnHeaderGUI()
         {
             _title ??= ObjectNames.NicifyVariableName(Value.GetType().Name);
-            GUILayout.Label(_title, Resources.Styles.NodeHeader, GUILayout.Height(30));
+            GUILayout.Label(_title, Resources.Styles.NodeHeader, GUILayout.Height(TitleHeight));
         }
 
         /// <summary> Draws standard field editors for all public fields </summary>
@@ -182,6 +185,80 @@ namespace YNode.Editor
             {
                 menu.AddCustomContextMenuItems(node2);
             }
+        }
+
+        protected void DrawEditableTitle(ref string title)
+        {
+            const string ID = "NodeEditor_DrawEditableTitle";
+
+            var c = new GUIContent(title);
+            Resources.Styles.NodeHeader.CalcMinMaxWidth(c, out float minWidth, out float maxWidth);
+            minWidth = MathF.Max(10, minWidth);
+
+            var titleRect = GUILayoutUtility.GetRect(minWidth, minWidth, TitleHeight, TitleHeight);
+            var center = titleRect.center;
+            titleRect.xMin = center.x - minWidth / 2f;
+            titleRect.xMax = center.x + minWidth / 2f;
+
+            AddCursorRectFromBody(titleRect, MouseCursor.Text);
+            var e = Event.current;
+            if (e.clickCount == 2 && e.button == 0 && titleRect.Contains(e.mousePosition))
+            {
+                e.Use();
+                Window.CurrentActivity = new EditTitleActivity(this, Window);
+            }
+
+            if (Window.CurrentActivity is EditTitleActivity edit && edit.Editor == this)
+            {
+                GUI.SetNextControlName(ID);
+                title = EditorGUI.TextField(titleRect, title, Resources.Styles.NodeHeader);
+
+                if (GUI.GetNameOfFocusedControl() == ID && EditorGUIUtility.editingTextField) // Successfully swapped focus
+                    edit.Focused = true;
+                else if (edit.Focused == false) // Not in focus and has never been, set the focus
+                    EditorGUI.FocusTextInControl(ID);
+                else if (edit.Focused) // Not in focus right now but has been before, user swapped focus, close off activity
+                    Window.CurrentActivity = null;
+            }
+            else
+            {
+                GUI.Label(titleRect, title, Resources.Styles.NodeHeader);
+            }
+        }
+
+        protected void AddCursorRectFromBody(Rect r, MouseCursor m, int controlID = 0)
+        {
+            r.position += Value.Position;
+            r = Window.GridToWindowRect(r);
+            r.y += 18;
+            s_internalAddCursorRect?.Invoke(r, m, controlID);
+        }
+
+        static NodeEditor()
+        {
+            s_internalAddCursorRect = (Refl_AddCursorRect?)
+                typeof(EditorGUIUtility)
+                    .GetMethod("Internal_AddCursorRect", BindingFlags.NonPublic | BindingFlags.Static)?
+                    .CreateDelegate(typeof(Refl_AddCursorRect));
+        }
+
+        private static readonly Refl_AddCursorRect? s_internalAddCursorRect;
+        delegate void Refl_AddCursorRect(Rect r, MouseCursor m, int controlID);
+
+        public class EditTitleActivity : NodeActivity
+        {
+            public NodeEditor Editor;
+            public bool Focused = false;
+
+            public EditTitleActivity(NodeEditor editor, GraphWindow window) : base(window) => Editor = editor;
+
+            public override void InputPreDraw(Event e) { }
+
+            public override void PreNodeDraw() { }
+
+            public override void PostNodeDraw() { }
+
+            public override void InputPostDraw(Event e) { }
         }
     }
 }
