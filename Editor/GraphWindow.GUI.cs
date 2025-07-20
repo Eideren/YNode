@@ -83,7 +83,7 @@ namespace YNode.Editor
                 _firstRun = false;
         }
 
-        void AutoSave()
+        private void AutoSave()
         {
             if (_lastChange is null)
                 throw new InvalidOperationException();
@@ -95,6 +95,8 @@ namespace YNode.Editor
                 _lastChange = null;
             }
         }
+
+        protected abstract bool StickyEditorEnabled { get; }
 
         protected virtual void OnGUIOverlay() { }
 
@@ -558,10 +560,13 @@ namespace YNode.Editor
 
                 _stickyEditors.Clear();
 
-                foreach (Object o in Selection.objects)
+                if (StickyEditorEnabled)
                 {
-                    if (o is NodeEditor editor)
+                    foreach (Object o in Selection.objects)
                     {
+                        if (o is not NodeEditor editor)
+                            continue;
+
                         _stickyEditors.Add(editor);
                         foreach (var kvp in editor.Ports)
                         {
@@ -574,11 +579,11 @@ namespace YNode.Editor
                         {
                             foreach (var (path, port) in otherEditor.Ports)
                             {
-                                if (port.Connection == editor)
-                                {
-                                    _stickyEditors.Add(otherEditor);
-                                    break;
-                                }
+                                if (port.Connection != editor)
+                                    continue;
+
+                                _stickyEditors.Add(otherEditor);
+                                break;
                             }
                         }
                     }
