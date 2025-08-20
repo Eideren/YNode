@@ -31,10 +31,16 @@ namespace YNode.Editor
             // and CreateGUI runs after OnGUI for some reason ...
             _ranLoad = true;
             Current = this;
-            foreach (INodeValue nodeValue in Graph.Nodes)
+            for (int i = Graph.Nodes.Count - 1; i >= 0; i--)
             {
-                InitNodeEditorFor(nodeValue);
+                if (Graph.Nodes[i] == null)
+                {
+                    Graph.Nodes.RemoveAt(i);
+                }
             }
+
+            foreach (INodeValue nodeValue in Graph.Nodes)
+                InitNodeEditorFor(nodeValue);
         }
 
         protected virtual void OnEnable() { }
