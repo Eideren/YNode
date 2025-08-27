@@ -6,6 +6,7 @@ using Sirenix.OdinInspector.Editor;
 using Sirenix.Utilities.Editor;
 using UnityEditor;
 using UnityEngine;
+using GenericMenu = YNode.Editor.AdvancedGenericMenu;
 
 namespace YNode.Editor
 {

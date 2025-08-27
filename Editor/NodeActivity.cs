@@ -4,6 +4,7 @@ using UnityEditor;
 using UnityEngine;
 using YNode.Editor.Internal;
 using Object = UnityEngine.Object;
+using GenericMenu = YNode.Editor.AdvancedGenericMenu;
 
 namespace YNode.Editor
 {

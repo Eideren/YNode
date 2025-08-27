@@ -7,9 +7,7 @@ using UnityEditor;
 using UnityEngine;
 using YNode.Editor.Internal;
 using Object = UnityEngine.Object;
-#if UNITY_2019_1_OR_NEWER && USE_ADVANCED_GENERIC_MENU
-using GenericMenu = XNodeEditor.AdvancedGenericMenu;
-#endif
+using GenericMenu = YNode.Editor.AdvancedGenericMenu;
 
 namespace YNode.Editor
 {

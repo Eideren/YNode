@@ -4,9 +4,7 @@ using System.Linq;
 using Sirenix.OdinInspector.Editor;
 using UnityEditor;
 using UnityEngine;
-#if UNITY_2019_1_OR_NEWER && USE_ADVANCED_GENERIC_MENU
-using GenericMenu = XNodeEditor.AdvancedGenericMenu;
-#endif
+using GenericMenu = YNode.Editor.AdvancedGenericMenu;
 
 namespace YNode.Editor
 {

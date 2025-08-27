@@ -4,10 +4,7 @@ using System.Linq;
 using System.Reflection;
 using UnityEditor;
 using UnityEngine;
-using YNode;
-#if UNITY_2019_1_OR_NEWER && USE_ADVANCED_GENERIC_MENU
-using GenericMenu = XNodeEditor.AdvancedGenericMenu;
-#endif
+using GenericMenu = YNode.Editor.AdvancedGenericMenu;
 
 namespace YNode.Editor
 {
