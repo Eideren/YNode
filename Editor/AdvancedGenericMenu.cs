@@ -1,6 +1,7 @@
 ﻿#if UNITY_2019_1_OR_NEWER
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using UnityEditor.IMGUI.Controls;
 using UnityEngine;
 using static UnityEditor.GenericMenu;
@@ -169,6 +170,13 @@ namespace YNode.Editor
                 DefaultMaxWidth.HasValue ? DefaultMaxWidth.Value : Screen.width);
 
             Show(position);
+            // Hide header bar from the drop down
+            if (GetType().GetField("m_WindowInstance", BindingFlags.NonPublic | BindingFlags.Instance) is {} windowField
+                && windowField.GetValue(this) is {} window
+                && window.GetType().GetProperty("showHeader", BindingFlags.NonPublic | BindingFlags.Instance) is {} showHeaderProp)
+            {
+                showHeaderProp.SetValue(window, false);
+            }
         }
 
         protected override AdvancedDropdownItem BuildRoot()
