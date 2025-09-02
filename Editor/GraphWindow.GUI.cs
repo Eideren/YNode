@@ -450,7 +450,7 @@ namespace YNode.Editor
 
                     if (port.ConnectedEditor is {} target)
                     {
-                        var endPosition = GetNodeEndpointPosition(target, port.Direction);
+                        var endPosition = GetNodeEndpointPosition(fromRect.center, target, port.Direction);
                         var toRect = new Rect(endPosition, default);
                         if (port.Direction == IO.Input)
                             (fromRect, toRect) = (toRect, fromRect);

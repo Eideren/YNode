@@ -81,7 +81,7 @@ namespace YNode.Editor
 
             Vector2 endPoint;
             if (_draggedOutputTarget != null)
-                endPoint = Window.GetNodeEndpointPosition(_draggedOutputTarget, Port.Direction);
+                endPoint = Window.GetNodeEndpointPosition(gridPoints[^1], _draggedOutputTarget, Port.Direction);
             else
                 endPoint = Window.WindowToGridPosition(Event.current.mousePosition);
 

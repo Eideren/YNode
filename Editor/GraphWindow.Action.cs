@@ -385,18 +385,24 @@ namespace YNode.Editor
             return windowRect.Contains(mousePos);
         }
 
-        public Vector2 GetNodeEndpointPosition(NodeEditor nodeEditor, IO direction)
+        public Vector2 GetNodeEndpointPosition(Vector2 startPos, NodeEditor nodeEditor, IO direction)
         {
             Vector2 pos;
             if (_stickyEditors.Contains(nodeEditor))
+            {
                 pos = GetStickyGridPosition(nodeEditor);
+            }
             else
-                pos = nodeEditor.Value.Position;
+            {
+                float min = nodeEditor.Value.Position.y;
+                float max = min+nodeEditor.CachedSize.y;
+                pos = new Vector2(nodeEditor.Value.Position.x, Mathf.Clamp(startPos.y, min+10, max-10));
+            }
 
             if (direction == IO.Input)
-                pos += new Vector2(nodeEditor.GetWidth() + ArrowWidth, 20);
+                pos += new Vector2(nodeEditor.GetWidth() + ArrowWidth, 0);
             else
-                pos += new Vector2(-ArrowWidth, 20);
+                pos += new Vector2(-ArrowWidth, 0);
 
 
             return pos;
