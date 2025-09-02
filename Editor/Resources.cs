@@ -118,11 +118,12 @@ namespace YNode.Editor
                 NodeBody = new GUIStyle();
                 NodeBody.normal.background = Resources.NodeBody;
                 NodeBody.border = new RectOffset(32, 32, 32, 32);
-                NodeBody.padding = new RectOffset(16, 16, 4, 16);
+                NodeBody.padding = new RectOffset();
 
                 NodeHighlight = new GUIStyle();
                 NodeHighlight.normal.background = Resources.NodeHighlight;
                 NodeHighlight.border = new RectOffset(32, 32, 32, 32);
+                NodeHighlight.padding = new RectOffset(16, 16, 4, 16);
 
                 Tooltip = new GUIStyle("helpBox");
                 Tooltip.alignment = TextAnchor.MiddleCenter;

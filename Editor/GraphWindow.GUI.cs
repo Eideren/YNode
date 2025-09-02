@@ -721,21 +721,13 @@ namespace YNode.Editor
             highlighted |= draggedPort?.CanConnectTo(nodeEditor.Value.GetType()) == true;
 
             GUIStyle verticalStyle;
-            if (highlighted)
-            {
-                GUIStyle style = new GUIStyle(nodeEditor.GetBodyStyle());
-                verticalStyle = new GUIStyle(nodeEditor.GetBodyHighlightStyle());
-                verticalStyle.padding = style.padding;
-                style.padding = new RectOffset();
-                GUI.color = nodeEditor.GetTint();
-                GUILayout.BeginVertical(style);
-                GUI.color = Preferences.GetSettings().HighlightColor;
-            }
-            else
-            {
-                verticalStyle = nodeEditor.GetBodyStyle();
-                GUI.color = nodeEditor.GetTint();
-            }
+
+            GUIStyle style = nodeEditor.GetBodyStyle();
+            verticalStyle = nodeEditor.GetBodyHighlightStyle();
+            GUI.color = nodeEditor.GetTint();
+            GUILayout.BeginVertical(style);
+            GUI.color = highlighted ? Preferences.GetSettings().HighlightColor : default;
+
             GUILayout.BeginVertical(verticalStyle);
 
             GUI.color = guiColor;
@@ -774,7 +766,7 @@ namespace YNode.Editor
                 }
             }
 
-            if (highlighted) GUILayout.EndVertical();
+            GUILayout.EndVertical();
 
             if (e.type != EventType.Layout)
             {
