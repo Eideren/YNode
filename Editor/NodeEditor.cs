@@ -86,6 +86,8 @@ namespace YNode.Editor
                 port.Disconnect();
         }
 
+        public virtual void PreRemoval() { }
+
         public virtual void OnHeaderGUI()
         {
             _title ??= ObjectNames.NicifyVariableName(Value.GetType().Name);
@@ -179,7 +181,7 @@ namespace YNode.Editor
             // Add actions to any number of selected nodes
             menu.AddItem(new GUIContent("Copy"), false, Window.CopySelectedNodes);
             menu.AddItem(new GUIContent("Duplicate"), false, Window.DuplicateSelectedNodes);
-            menu.AddItem(new GUIContent("Remove"), false, canRemove ? Window.RemoveSelectedNodes : null);
+            menu.AddItem(new GUIContent("Remove"), false, canRemove ? Window.RemoveSelectedNodes : null!);
 
             // Custom sctions if only one node is selected
             if (Selection.objects.Length == 1 && Selection.activeObject is NodeEditor node2)

@@ -304,12 +304,10 @@ namespace YNode.Editor
             }
 
             _selectedReroutes.Clear();
-            foreach (UnityEngine.Object item in Selection.objects)
+            foreach (var item in Selection.objects.ToArray())
             {
                 if (item is NodeEditor node)
-                {
                     RemoveNode(node);
-                }
             }
         }
 

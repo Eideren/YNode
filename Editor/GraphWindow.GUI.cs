@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Buffers;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
@@ -120,7 +121,7 @@ namespace YNode.Editor
             GUI.matrix = Matrix4x4.TRS(offset, Quaternion.identity, Vector3.one);
         }
 
-        private void DrawGrid(Rect rect, float zoom, Vector2 panOffset)
+        protected virtual void DrawGrid(Rect rect, float zoom, Vector2 panOffset)
         {
             rect.position = Vector2.zero;
 
@@ -447,7 +448,7 @@ namespace YNode.Editor
                     if (portRectInWindowSpace.Contains(mousePos))
                         _hoveredPort = port;
 
-                    if (port.Connection is {} target)
+                    if (port.ConnectedEditor is {} target)
                     {
                         var endPosition = GetNodeEndpointPosition(target, port.Direction);
                         var toRect = new Rect(endPosition, default);
@@ -569,7 +570,7 @@ namespace YNode.Editor
                         _stickyEditors.Add(editor);
                         foreach (var kvp in editor.Ports)
                         {
-                            var connection = kvp.Value.Connection;
+                            var connection = kvp.Value.ConnectedEditor;
                             if (connection is not null)
                                 _stickyEditors.Add(connection);
                         }
@@ -578,7 +579,7 @@ namespace YNode.Editor
                         {
                             foreach (var (path, port) in otherEditor.Ports)
                             {
-                                if (port.Connection != editor)
+                                if (port.Connected != editor.Value)
                                     continue;
 
                                 _stickyEditors.Add(otherEditor);
@@ -608,12 +609,20 @@ namespace YNode.Editor
             Undo.RecordObject(Graph, $"Changed {Graph.name}");
             EditorGUI.BeginChangeCheck();
 
-            foreach (var (node, editor) in _nodesToEditor)
             {
-                if (_stickyEditors.Contains(editor))
-                    continue;
+                var arr = ArrayPool<NodeEditor>.Shared.Rent(_nodesToEditor.Values.Count);
+                _nodesToEditor.Values.CopyTo(arr, 0); // this collection may be modified while iterated
+                int c = _nodesToEditor.Count;
+                for (int i = 0; i < c; i++)
+                {
+                    NodeEditor? editor = arr[i];
+                    if (_stickyEditors.Contains(editor))
+                        continue;
 
-                DrawNodeEditor(e, editor, false, guiColor, mousePos);
+                    DrawNodeEditor(e, editor, false, guiColor, mousePos);
+                }
+
+                ArrayPool<NodeEditor>.Shared.Return(arr);
             }
 
             if (_stickyEditors.Count > 0)
@@ -737,7 +746,7 @@ namespace YNode.Editor
             nodeEditor.OnBodyGUI();
 
             //If user changed a value, notify other scripts through onUpdateNode
-            if (EditorGUI.EndChangeCheck())
+            if (EditorGUI.EndChangeCheck() && NodesToEditor.ContainsKey(nodeEditor.Value)/* the user could have deleted it while in OnBodyGUI */)
                 nodeEditor.SerializedObject.ApplyModifiedProperties();
 
             GUILayout.EndVertical();

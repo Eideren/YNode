@@ -24,32 +24,33 @@ namespace YNode.Editor
             if (_valueToEditor.TryGetValue(valueType, out var editorType))
                 return editorType;
 
-            var matchingTypes = TypeCache.GetTypesDerivedFrom(genericBase)
-                .Where(x => x.IsAbstract == false)
-                .Select(x => (type:x, generics:x.GetArgumentsOfInheritedOpenGenericClass(openGeneric)))
-                .Where(x => x.generics != null && x.generics[0].IsAssignableFrom(valueType))
-                .Select(x => (x.type, generic: x.generics[0]))
-                .ToArray();
+            var nodeEditors = TypeCache.GetTypesDerivedFrom(genericBase);
 
-            int max = 0;
-            Type selection = typeof(NodeEditor);
-            foreach (var (type, generic) in matchingTypes)
+            for (Type? t = valueType; t != null && t != typeof(ScriptableObject); t = t.BaseType)
             {
-                var score = 1;
-                for (var t = generic.BaseType; t != null; t = t.BaseType) // Most derived wins
+                Type match;
+                try
                 {
-                    score++;
+                    match = openGeneric.MakeGenericType(t);
+                }
+                catch (ArgumentException) // Type constraint does not support T
+                {
+                    continue;
                 }
 
-                if (max < score)
+                foreach (var editor in nodeEditors)
                 {
-                    max = score;
-                    selection = type;
+                    if (match.IsAssignableFrom(editor))
+                    {
+                        _valueToEditor[valueType] = editor;
+                        return editor;
+                    }
                 }
             }
 
-            _valueToEditor[valueType] = selection;
-            return selection;
+            _valueToEditor[valueType] = genericBase;
+            return genericBase;
+
         }
 
         public static bool GetAttrib<T>(Type classType, [MaybeNullWhen(false)] out T attribOut) where T : Attribute

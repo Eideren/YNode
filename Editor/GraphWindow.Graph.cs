@@ -16,6 +16,7 @@ namespace YNode.Editor
         public static bool InNodeEditor = false;
 
         private Dictionary<INodeValue, NodeEditor> _nodesToEditor = new();
+        private HashSet<NodeEditor> _currentlyBeingRemoved = new();
 
         public static GraphWindow Current { get; private set; } = null!;
 
@@ -170,7 +171,7 @@ namespace YNode.Editor
 
                 // Add node entry to context menu
                 if (disallowed)
-                    menu.AddItem(new GUIContent(newPath), false, null);
+                    menu.AddItem(new GUIContent(newPath), false, null!);
                 else
                     menu.AddItem(new GUIContent(newPath), false, () =>
                     {
@@ -304,12 +305,13 @@ namespace YNode.Editor
             return editor;
         }
 
-        NodeEditor InitNodeEditorFor(INodeValue node)
+        public NodeEditor InitNodeEditorFor(INodeValue node)
         {
             if (_nodesToEditor.TryGetValue(node, out var nodeEditor))
                 return nodeEditor;
 
-            var editor = (NodeEditor)CreateInstance(Utilities.GetCustomEditor(node.GetType(), typeof(CustomNodeEditor<>), typeof(NodeEditor)));
+            var t = Utilities.GetCustomEditor(node.GetType(), typeof(ICustomNodeEditor<>), typeof(NodeEditor));
+            var editor = (NodeEditor)CreateInstance(t);
             editor.hideFlags = HideFlags.DontSaveInBuild | HideFlags.DontSaveInEditor;
             editor.Value = node;
             editor.SerializedObject = new SerializedObject(editor);
@@ -356,22 +358,50 @@ namespace YNode.Editor
         {
             if (!CanRemove(nodeEditor)) return;
 
-            // Remove the node
-            Undo.RecordObject(nodeEditor, "Delete Node");
-            Undo.RecordObject(Graph, "Delete Node");
+            if (_nodesToEditor.ContainsKey(nodeEditor.Value) == false)
+                return;
+
+            if (_currentlyBeingRemoved.Add(nodeEditor) == false)
+                return;
+
+            try
+            {
+                nodeEditor.PreRemoval();
+
+                // Remove the node
+                Undo.RecordObject(nodeEditor, "Delete Node");
+                Undo.RecordObject(Graph, "Delete Node");
+                foreach (var editor in _nodesToEditor)
+                {
+                    foreach (var port in editor.Value.Ports)
+                    {
+                        if (port.Value.Connected == nodeEditor.Value)
+                            port.Value.Disconnect();
+                    }
+                }
+
+                Graph.RemoveNode(nodeEditor.Value);
+                EditorUtility.SetDirty(Graph);
+                _nodesToEditor.Remove(nodeEditor.Value);
+                nodeEditor.ObjectTree.Dispose();
+                Undo.DestroyObjectImmediate(nodeEditor);
+            }
+            finally
+            {
+                _currentlyBeingRemoved.Remove(nodeEditor);
+            }
+        }
+
+        public void ReplaceConnection(NodeEditor nodeEditor, NodeEditor newEditor)
+        {
             foreach (var editor in _nodesToEditor)
             {
                 foreach (var port in editor.Value.Ports)
                 {
-                    if (port.Value.Connection == nodeEditor)
-                        port.Value.Disconnect();
+                    if (port.Value.Connected == nodeEditor.Value)
+                        port.Value.Connect(newEditor);
                 }
             }
-            Graph.RemoveNode(nodeEditor.Value);
-            EditorUtility.SetDirty(Graph);
-            _nodesToEditor.Remove(nodeEditor.Value);
-            nodeEditor.ObjectTree.Dispose();
-            Undo.DestroyObjectImmediate(nodeEditor);
         }
     }
 }

@@ -34,7 +34,7 @@ namespace YNode.Editor
         public ConnectPortActivity(Port port, GraphWindow window) : base(window)
         {
             Port = port;
-            if (Port.Connection is not null)
+            if (Port.Connected is not null)
             {
                 GUI.changed = true;
                 Port.Disconnect();
@@ -48,7 +48,7 @@ namespace YNode.Editor
             {
                 case EventType.MouseDrag when e.button == 0:
                     // Set target even if we can't connect, so as to prevent auto-conn menu from opening erroneously
-                    if (Window.HoveredNode != null && !Port.Connection == Window.HoveredNode && Port.CanConnectTo(Window.HoveredNode.Value.GetType()))
+                    if (Window.HoveredNode != null && Port.Connected != Window.HoveredNode.Value && Port.CanConnectTo(Window.HoveredNode.Value.GetType()))
                     {
                         _draggedOutputTarget = Window.HoveredNode;
                     }
@@ -395,7 +395,7 @@ namespace YNode.Editor
 
                 foreach ((_, Port port) in node.Ports)
                 {
-                    if (port.Connection is {} target && port.TryGetReroutePoints(out var reroutePoints))
+                    if (port.Connected is not null && port.TryGetReroutePoints(out var reroutePoints))
                     {
                         for (int i = 0; i < reroutePoints.Count; i++)
                         {

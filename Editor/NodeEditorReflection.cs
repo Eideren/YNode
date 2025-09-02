@@ -47,6 +47,9 @@ namespace YNode.Editor
                 CacheAttributes<int, NodeWidthAttribute>(out s_nodeWidth, x => x.width);
             }
 
+            if (nodeType.IsGenericType)
+                nodeType = nodeType.GetGenericTypeDefinition();
+
             return s_nodeWidth.TryGetValue(nodeType, out width);
         }
 

@@ -28,15 +28,23 @@ namespace YNode.Editor
         public NoodleStroke Stroke { get; set; }
         public Rect CachedRect { get; set; }
         public float CachedHeight { get; set; }
-        public int Drawn { get; set; }
 
-        /// <summary> Return the first non-null connection </summary>
-        public NodeEditor? Connection
+        public INodeValue? Connected => _getConnected();
+
+        public NodeEditor? ConnectedEditor
         {
             get
             {
                 INodeValue? value = _getConnected();
-                return value != null ? NodeEditor.Window.NodesToEditor[value] : null;
+                if (value != null)
+                {
+                    if (NodeEditor.Window.NodesToEditor.TryGetValue(value, out var editor))
+                        return editor;
+                    else
+                        Debug.LogError($"Value without editor:{value}");
+                }
+
+                return null;
             }
         }
 
@@ -57,8 +65,7 @@ namespace YNode.Editor
         /// <summary> Connect this <see cref="Port" /> to another </summary>
         public void Connect(NodeEditor newConnection)
         {
-            NodeEditor? connected = Connection;
-            if (connected == newConnection)
+            if (Connected == newConnection.Value)
             {
                 Debug.LogWarning("Port already connected. ");
                 return;
