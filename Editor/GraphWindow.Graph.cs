@@ -180,10 +180,11 @@ namespace YNode.Editor
                     });
             }
 
-            menu.AddSeparator("");
+            menu.AddSeparator();
             if (CopyBuffer.Length > 0)
                 menu.AddItem(new GUIContent("Paste"), false, () => PasteNodes(pos));
-            else menu.AddDisabledItem(new GUIContent("Paste"));
+            else
+                menu.AddDisabledItem(new GUIContent("Paste"));
             menu.AddItem(new GUIContent("Preferences"), false, NodeEditorReflection.OpenPreferences);
             menu.AddCustomContextMenuItems(Graph);
         }
