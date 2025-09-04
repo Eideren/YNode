@@ -32,7 +32,7 @@ namespace YNode.Editor
         public NodeGraph Graph => Window.Graph;
 
         /// <summary> Iterate over all ports on this node. </summary>
-        internal Dictionary<string, Port> Ports => _ports;
+        public Dictionary<string, Port> Ports => _ports;
 
         public bool IsSelected() => Selection.Contains(this);
 

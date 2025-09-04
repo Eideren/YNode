@@ -192,6 +192,7 @@ namespace YNode.Editor
 
         public override void InputPreDraw(Event e)
         {
+            EditorGUIUtility.AddCursorRect(new Rect(default, Window.position.size), MouseCursor.Pan);
             switch (e.type)
             {
                 case EventType.MouseDrag when e.button == 0:
@@ -277,6 +278,7 @@ namespace YNode.Editor
 
         public override void InputPreDraw(Event e)
         {
+            EditorGUIUtility.AddCursorRect(new Rect(default, Window.position.size), MouseCursor.Pan);
             switch (e.type)
             {
                 case EventType.MouseUp when e.button is 1 or 2:
