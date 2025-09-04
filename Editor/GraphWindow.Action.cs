@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Sirenix.OdinInspector.Editor;
 using UnityEditor;
 using UnityEngine;
 using YNode.Editor.Internal;
@@ -29,6 +30,9 @@ namespace YNode.Editor
         protected virtual void ControlsPreDraw()
         {
             wantsMouseMove = true;
+            if (OdinObjectSelector.IsOpen)
+                return;
+
             Event e = Event.current;
             CurrentActivity?.InputPreDraw(e);
         }
@@ -36,6 +40,9 @@ namespace YNode.Editor
         protected virtual void ControlsPostDraw()
         {
             wantsMouseMove = true;
+            if (OdinObjectSelector.IsOpen)
+                return;
+
             Event e = Event.current;
             CurrentActivity?.InputPostDraw(e);
             HandleNodeMapInput();
