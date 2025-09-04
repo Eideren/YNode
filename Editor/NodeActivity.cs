@@ -176,7 +176,7 @@ namespace YNode.Editor
             var p = window.WindowToGridPosition(mousePosition);
 
             Editors = Selection.objects.OfType<NodeEditor>().ToArray();
-            DragOffset = new Vector2[Editors.Length + window._selectedReroutes.Count];
+            DragOffset = new Vector2[Editors.Length + window.SelectedReroutes.Count];
 
             for (int i = 0; i < Editors.Length; i++)
             {
@@ -184,9 +184,9 @@ namespace YNode.Editor
                 DragOffset[i] = node.Value.Position - p;
             }
 
-            for (int i = 0; i < window._selectedReroutes.Count; i++)
+            for (int i = 0; i < window.SelectedReroutes.Count; i++)
             {
-                DragOffset[Editors.Length + i] = window._selectedReroutes[i].GetPoint() - p;
+                DragOffset[Editors.Length + i] = window.SelectedReroutes[i].GetPoint() - p;
             }
         }
 
@@ -231,7 +231,7 @@ namespace YNode.Editor
                     }
 
                     // Move selected reroutes with offset
-                    for (int i = 0; i < Window._selectedReroutes.Count; i++)
+                    for (int i = 0; i < Window.SelectedReroutes.Count; i++)
                     {
                         Vector2 pos = mousePos + DragOffset[Editors.Length + i];
                         if (gridSnap)
@@ -240,7 +240,7 @@ namespace YNode.Editor
                             pos.y = Mathf.Round(pos.y / 16) * 16;
                         }
 
-                        Window._selectedReroutes[i].SetPoint(pos);
+                        Window.SelectedReroutes[i].SetPoint(pos);
                     }
 
                     Window.Repaint();
@@ -317,7 +317,7 @@ namespace YNode.Editor
         public BoxSelectActivity(GraphWindow window, Vector2 dragBoxStart) : base(window)
         {
             _initialEditors = Selection.objects.ToArray();
-            _initialReroute = window._selectedReroutes.ToArray();
+            _initialReroute = window.SelectedReroutes.ToArray();
             _selectedEditors.AddRange(_initialEditors);
             _selectedReroutes.AddRange(_initialReroute);
             _dragBoxStart = Window.WindowToGridPosition(dragBoxStart);
@@ -410,8 +410,8 @@ namespace YNode.Editor
                 }
             }
 
-            Window._selectedReroutes.Clear();
-            Window._selectedReroutes.AddRange(_selectedReroutes);
+            Window.SelectedReroutes.Clear();
+            Window.SelectedReroutes.AddRange(_selectedReroutes);
             Selection.objects = _selectedEditors.ToArray();
         }
     }

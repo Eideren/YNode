@@ -13,13 +13,14 @@ namespace YNode.Editor
     {
         public static NodeEditor[] CopyBuffer = Array.Empty<NodeEditor>();
 
-        public NodeActivity? CurrentActivity = null;
         [NonSerialized] private NodeEditor? _hoveredNode = null;
         [NonSerialized] private Port? _hoveredPort = null;
         [NonSerialized] private ReroutePoint? _hoveredReroute = null;
 
         [NonSerialized] private Vector2 _lastMousePosition;
-        [NonSerialized] public List<ReroutePoint> _selectedReroutes = new();
+
+        [NonSerialized] public List<ReroutePoint> SelectedReroutes = new();
+        [NonSerialized] public NodeActivity? CurrentActivity = null;
 
         /// <summary> Return the Hovered port or null if not exist </summary>
         public Port? HoveredPort => _hoveredPort;
@@ -98,20 +99,20 @@ namespace YNode.Editor
                     else if (_hoveredReroute is { } hoveredRerouteValue)
                     {
                         GUI.changed = true;
-                        if (_selectedReroutes.Contains(hoveredRerouteValue))
+                        if (SelectedReroutes.Contains(hoveredRerouteValue))
                         {
                             if (e.control || e.shift)
-                                _selectedReroutes.Remove(hoveredRerouteValue);
+                                SelectedReroutes.Remove(hoveredRerouteValue);
                         }
                         else
                         {
                             if (e.control || e.shift)
                             {
-                                _selectedReroutes.Add(hoveredRerouteValue);
+                                SelectedReroutes.Add(hoveredRerouteValue);
                             }
                             else
                             {
-                                _selectedReroutes = new List<ReroutePoint> { hoveredRerouteValue };
+                                SelectedReroutes = new List<ReroutePoint> { hoveredRerouteValue };
                                 Selection.activeObject = null;
                             }
                         }
@@ -130,7 +131,7 @@ namespace YNode.Editor
                             bool add = e.control || e.shift;
                             SelectNode(_hoveredNode, add);
                             if (!add)
-                                _selectedReroutes.Clear();
+                                SelectedReroutes.Clear();
                         }
 
                         if (e.clickCount == 2)
@@ -146,7 +147,7 @@ namespace YNode.Editor
                     {
                         if (!e.control && !e.shift)
                         {
-                            _selectedReroutes.Clear();
+                            SelectedReroutes.Clear();
                             Selection.activeObject = null;
                         }
                     }
@@ -304,13 +305,13 @@ namespace YNode.Editor
         public void RemoveSelectedNodes()
         {
             // We need to delete reroutes starting at the highest point index to avoid shifting indices
-            _selectedReroutes = _selectedReroutes.OrderByDescending(x => x.PointIndex).ToList();
-            for (int i = 0; i < _selectedReroutes.Count; i++)
+            SelectedReroutes = SelectedReroutes.OrderByDescending(x => x.PointIndex).ToList();
+            for (int i = 0; i < SelectedReroutes.Count; i++)
             {
-                _selectedReroutes[i].RemovePoint();
+                SelectedReroutes[i].RemovePoint();
             }
 
-            _selectedReroutes.Clear();
+            SelectedReroutes.Clear();
             foreach (var item in Selection.objects.ToArray())
             {
                 if (item is NodeEditor node)

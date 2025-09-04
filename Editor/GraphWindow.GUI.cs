@@ -497,7 +497,7 @@ namespace YNode.Editor
                                     rect = GridToWindowRect(rect);
 
                                     // Draw selected reroute points with an outline
-                                    if (_selectedReroutes.Contains(rerouteRef))
+                                    if (SelectedReroutes.Contains(rerouteRef))
                                     {
                                         GUI.color = Preferences.GetSettings().HighlightColor;
                                         GUI.DrawTexture(rect, portStyle.normal.background);
