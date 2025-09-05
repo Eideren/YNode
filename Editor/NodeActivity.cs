@@ -66,7 +66,7 @@ namespace YNode.Editor
 
         public override void PreNodeDraw()
         {
-            Gradient gradient = Window.GetNoodleGradient(Port, _draggedOutputTarget);
+            var gradient = Window.GetNoodleGradient(Port, _draggedOutputTarget);
             float thickness = Window.GetNoodleThickness(Port, _draggedOutputTarget);
             NoodlePath path = Window.GetNoodlePath(Port, _draggedOutputTarget);
             NoodleStroke stroke = Port.Stroke;
@@ -92,11 +92,11 @@ namespace YNode.Editor
                 gridPoints.Reverse();
 
             Window.DrawNoodle(gradient, path, stroke, thickness, gridPoints);
-            Window.DrawArrow(Port.Direction, endPoint, gradient.colorKeys[isInput ? 0 : ^1].color);
+            Window.DrawArrow(Port.Direction, endPoint, isInput ? gradient.a : gradient.b);
 
-            GUIStyle portStyle1 = Window.GetPortStyle(Port);
+            Window.GetPortStyle(Port, out var portActive, out var portNormal, out _);
             Color bgcol1 = Color.black;
-            Color frcol1 = gradient.colorKeys[0].color;
+            Color frcol1 = gradient.a;
             bgcol1.a = 0.6f;
             frcol1.a = 0.6f;
 
@@ -109,7 +109,7 @@ namespace YNode.Editor
                     Rect rect1 = ReroutePoint.GetRect(reroute[i1]);
                     rect1 = Window.GridToWindowRect(rect1);
 
-                    Window.DrawPortHandle(rect1, bgcol1, frcol1, portStyle1.normal.background, portStyle1.active.background);
+                    Window.DrawPortHandle(rect1, bgcol1, frcol1, portNormal, portActive);
                 }
             }
         }

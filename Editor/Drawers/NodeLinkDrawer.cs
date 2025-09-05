@@ -118,7 +118,7 @@ namespace YNode.Editor
                     EditorGUILayout.LabelField(label);
 
                 rect = GUILayoutUtility.GetLastRect();
-                float paddingLeft = GraphWindow.Current.GetPortStyle(port).padding.left;
+                GraphWindow.Current.GetPortStyle(port, out _, out _, out var paddingLeft);
                 rect.position = rect.position - new Vector2(16 + paddingLeft, -spacePadding);
                 // If property is an output, display a text label and put a port handle on the right side
             }
@@ -159,7 +159,8 @@ namespace YNode.Editor
                     EditorGUILayout.LabelField(label, Resources.OutputPort, GUILayout.MinWidth(30));
 
                 rect = GUILayoutUtility.GetLastRect();
-                rect.width += GraphWindow.Current.GetPortStyle(port).padding.right;
+                GraphWindow.Current.GetPortStyle(port, out _, out _, out float padding);
+                rect.width += padding;
                 rect.position = rect.position + new Vector2(rect.width, spacePadding);
             }
 

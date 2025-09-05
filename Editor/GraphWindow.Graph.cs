@@ -11,8 +11,6 @@ namespace YNode.Editor
     /// <summary> Base class to derive custom Node Graph editors from. Use this to override how graphs are drawn in the editor. </summary>
     public partial class GraphWindow
     {
-        private static Dictionary<(Color, Color), Gradient> s_gradientCache = new();
-
         public static bool InNodeEditor = false;
 
         private Dictionary<INodeValue, NodeEditor> _nodesToEditor = new();
@@ -192,7 +190,7 @@ namespace YNode.Editor
         /// <summary> Returned gradient is used to color noodles </summary>
         /// <param name="output"> The output this noodle comes from. Never null. </param>
         /// <param name="input"> The output this noodle comes from. Can be null if we are dragging the noodle. </param>
-        public virtual Gradient GetNoodleGradient(Port output, NodeEditor? input)
+        public virtual (Color a, Color b) GetNoodleGradient(Port output, NodeEditor? input)
         {
             Color a, b;
             // If dragging the noodle, draw solid, slightly transparent
@@ -219,14 +217,7 @@ namespace YNode.Editor
                 }
             }
 
-            if (s_gradientCache.TryGetValue((a, b), out var grad) == false)
-                s_gradientCache[(a, b)] = grad = new Gradient
-                {
-                    colorKeys = new GradientColorKey[] { new GradientColorKey(a, 0f), new GradientColorKey(b, 1f) },
-                    alphaKeys = new GradientAlphaKey[] { new GradientAlphaKey(1f, 0f), new GradientAlphaKey(1f, 1f) },
-                };
-
-            return grad;
+            return (a, b);
         }
 
         /// <summary> Returned float is used for noodle thickness </summary>
@@ -258,12 +249,12 @@ namespace YNode.Editor
         /// </summary>
         /// <param name="port">the owner of the style</param>
         /// <returns></returns>
-        public virtual GUIStyle GetPortStyle(Port port)
+        public virtual void GetPortStyle(Port port, out Texture2D activeBackground, out Texture2D normalBackground, out float padding)
         {
             if (port.Direction == IO.Input)
-                return Resources.Styles.InputPort;
-
-            return Resources.Styles.OutputPort;
+                (activeBackground, normalBackground, padding) = Resources.Styles.InputPortCache;
+            else
+                (activeBackground, normalBackground, padding) = Resources.Styles.OutputPortCache;
         }
 
         /// <summary> The returned color is used to color the background of the door.

@@ -97,6 +97,9 @@ namespace YNode.Editor
         /// <summary> Draws standard field editors for all public fields </summary>
         public virtual void OnBodyGUI()
         {
+            if (Window.CurrentActivity is not null && Event.current.type is EventType.Layout or EventType.Repaint == false)
+                return;
+
             GraphWindow.InNodeEditor = true;
 
             // Unity specifically requires this to save/update any serial object.

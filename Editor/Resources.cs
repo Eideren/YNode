@@ -92,6 +92,8 @@ namespace YNode.Editor
         public class StyleRepository
         {
             public GUIStyle InputPort, OutputPort, NodeHeader, NodeBody, Tooltip, NodeHighlight;
+            public (Texture2D Active, Texture2D Normal, float Padding) OutputPortCache;
+            public (Texture2D Active, Texture2D Normal, float Padding) InputPortCache;
 
             public StyleRepository()
             {
@@ -109,6 +111,9 @@ namespace YNode.Editor
                 OutputPort.padding.right = 0;
                 OutputPort.active.background = Dot;
                 OutputPort.normal.background = DotOuter;
+
+                OutputPortCache = (OutputPort.active.background, OutputPort.normal.background, OutputPort.padding.right);
+                InputPortCache = (InputPort.active.background, InputPort.normal.background, InputPort.padding.left);
 
                 NodeHeader = new GUIStyle();
                 NodeHeader.alignment = TextAnchor.MiddleCenter;
