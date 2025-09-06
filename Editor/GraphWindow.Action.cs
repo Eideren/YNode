@@ -31,8 +31,6 @@ namespace YNode.Editor
         protected virtual void ControlsPreDraw()
         {
             wantsMouseMove = true;
-            if (OdinObjectSelector.IsOpen)
-                return;
 
             Event e = Event.current;
             CurrentActivity?.InputPreDraw(e);
@@ -41,11 +39,16 @@ namespace YNode.Editor
         protected virtual void ControlsPostDraw()
         {
             wantsMouseMove = true;
-            if (OdinObjectSelector.IsOpen)
-                return;
+            if (OdinObjectSelector.IsOpen && CurrentActivity is null)
+                CurrentActivity = new OdinSelectorOpen(this);
 
             Event e = Event.current;
-            CurrentActivity?.InputPostDraw(e);
+            if (CurrentActivity is not null)
+            {
+                CurrentActivity.InputPostDraw(e);
+                return;
+            }
+
             HandleNodeMapInput();
             switch (e.type)
             {

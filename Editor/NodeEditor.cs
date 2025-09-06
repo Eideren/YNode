@@ -97,42 +97,25 @@ namespace YNode.Editor
         /// <summary> Draws standard field editors for all public fields </summary>
         public virtual void OnBodyGUI()
         {
-            if (Window.CurrentActivity is not null && Event.current.type is EventType.Layout or EventType.Repaint == false)
-                return;
-
-            GraphWindow.InNodeEditor = true;
-
-            // Unity specifically requires this to save/update any serial object.
-            // serializedObject.Update(); must go at the start of an inspector gui, and
-            // serializedObject.ApplyModifiedProperties(); goes at the end.
-            // Although it doesn't seem like we need it because of how NodeEditors are just referencing graph nodes instead of hosting them
-            // SerializedObject.Update();
-
             try
             {
-                ObjectTree.BeginDraw(false);
+                ObjectTree.BeginDraw(true);
+
+                GUIHelper.PushLabelWidth(84);
+                ObjectTree.DrawProperties();
+                GUIHelper.PopLabelWidth();
+
+                // Call repaint so that the graph window elements respond properly to layout changes coming from Odin
+                if (GUIHelper.RepaintRequested)
+                {
+                    GUIHelper.ClearRepaintRequest();
+                    Window.Repaint();
+                }
             }
-            catch (ArgumentNullException)
+            finally
             {
                 ObjectTree.EndDraw();
-                return;
             }
-
-            GUIHelper.PushLabelWidth(84);
-            EditorGUI.BeginChangeCheck();
-            ObjectTree.DrawProperties();
-            ObjectTree.EndDraw();
-            GUIHelper.PopLabelWidth();
-
-            //SerializedObject.ApplyModifiedProperties();
-
-            // Call repaint so that the graph window elements respond properly to layout changes coming from Odin
-            if (GUIHelper.RepaintRequested)
-            {
-                GUIHelper.ClearRepaintRequest();
-                Window.Repaint();
-            }
-            GraphWindow.InNodeEditor = false;
         }
 
         public virtual int GetWidth()

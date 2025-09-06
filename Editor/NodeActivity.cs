@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
+using Sirenix.OdinInspector.Editor;
 using UnityEditor;
 using UnityEngine;
 using YNode.Editor.Internal;
@@ -435,5 +436,32 @@ namespace YNode.Editor
         public override void PostNodeDraw() { }
 
         public override void InputPostDraw(Event e) { }
+    }
+
+    public class OdinSelectorOpen : NodeActivity
+    {
+        public OdinSelectorOpen(GraphWindow window) : base(window)
+        {
+        }
+
+        public override void InputPreDraw(Event e)
+        {
+            if (OdinObjectSelector.IsOpen == false && e.type == EventType.Repaint)
+            {
+                Window.CurrentActivity = null;
+            }
+        }
+
+        public override void PreNodeDraw()
+        {
+        }
+
+        public override void PostNodeDraw()
+        {
+        }
+
+        public override void InputPostDraw(Event e)
+        {
+        }
     }
 }

@@ -17,6 +17,7 @@ namespace YNode.Editor
     {
         private const float ArrowWidth = 16;
         private static readonly Vector3[] s_polyLineTempArray = new Vector3[2];
+
         private HashSet<NodeEditor> _culledEditors = new();
         private HashSet<NodeEditor> _stickyEditors = new();
         private bool _firstRun = true;
@@ -554,15 +555,15 @@ namespace YNode.Editor
         private void DrawNodes()
         {
             Event e = Event.current;
+            if (e.type != EventType.Layout)
+                _hoveredNode = null;
+
+            if (CurrentActivity is not null && e.type is not EventType.Layout and not EventType.Repaint)
+                return; // Do not pass input Events to nodes when doing an activity, improves performance of activities
 
             BeginZoomed(position, Zoom, TopPadding);
 
             Vector2 mousePos = e.mousePosition;
-
-            if (e.type != EventType.Layout)
-            {
-                _hoveredNode = null;
-            }
 
             //Save guiColor so we can revert it
             Color guiColor = GUI.color;
@@ -608,27 +609,18 @@ namespace YNode.Editor
                 if (Graph.Nodes.Contains(value))
                     continue;
 
-                foreach (var value2 in _nodesToEditor.Keys.ToArray())
+                foreach (var (node2, editor2) in _nodesToEditor.ToArray())
                 {
-                    if (Graph.Nodes.Contains(value2) == false)
-                    {
-                        _nodesToEditor.Remove(value2, out var v);
-                        v?.ObjectTree.Dispose();
-                    }
+                    if (Graph.Nodes.Contains(node2) == false)
+                        RemoveNode(editor2);
                 }
                 break;
             }
 
-            bool active = Event.current.type is EventType.Layout or EventType.Repaint == false;
-            if (active)
-                Undo.RecordObject(Graph, $"Changed {Graph.name}");
-            EditorGUI.BeginChangeCheck();
-
             {
                 var arr = ArrayPool<NodeEditor>.Shared.Rent(_nodesToEditor.Values.Count);
                 _nodesToEditor.Values.CopyTo(arr, 0); // this collection may be modified while iterated
-                int c = _nodesToEditor.Count;
-                for (int i = 0; i < c; i++)
+                for (int i = 0, c = _nodesToEditor.Count; i < c; i++)
                 {
                     NodeEditor? editor = arr[i];
                     if (_stickyEditors.Contains(editor))
@@ -638,23 +630,18 @@ namespace YNode.Editor
                 }
 
                 ArrayPool<NodeEditor>.Shared.Return(arr);
-            }
 
-            if (_stickyEditors.Count > 0)
-            {
-                var prevColor = GUI.color;
-                GUI.color = new Color(0, 0, 0, 0.5f);
-                GUI.DrawTexture(Rect.MinMaxRect(-10000, -10000, 10000, 10000), Texture2D.whiteTexture);
-                GUI.color = prevColor;
-            }
+                if (_stickyEditors.Count > 0)
+                {
+                    var prevColor = GUI.color;
+                    GUI.color = new Color(0, 0, 0, 0.5f);
+                    GUI.DrawTexture(Rect.MinMaxRect(-10000, -10000, 10000, 10000), Texture2D.whiteTexture);
+                    GUI.color = prevColor;
+                }
 
-            foreach (var editor in _stickyEditors)
-            {
-                DrawNodeEditor(e, editor, true, guiColor, mousePos);
+                foreach (var editor in _stickyEditors)
+                    DrawNodeEditor(e, editor, true, guiColor, mousePos);
             }
-
-            if (active && EditorGUI.EndChangeCheck())
-                Undo.FlushUndoRecordObjects();
 
             EndZoomed(position, Zoom, TopPadding);
         }
@@ -707,9 +694,6 @@ namespace YNode.Editor
                     port.CachedRect = default;
             }
 
-            // Set default label width. This is potentially overridden in OnBodyGUI
-            EditorGUIUtility.labelWidth = 84;
-
             //Get node position
             Vector2 nodePos = GridToWindowPositionNoClipped(nodeEditor.Value.Position);
             if (sticky)
@@ -735,26 +719,34 @@ namespace YNode.Editor
             var draggedPort = (this.CurrentActivity as ConnectPortActivity)?.Port;
             highlighted |= draggedPort?.CanConnectTo(nodeEditor.Value.GetType()) == true;
 
-            GUIStyle verticalStyle;
-
-            GUIStyle style = nodeEditor.GetBodyStyle();
-            verticalStyle = nodeEditor.GetBodyHighlightStyle();
             GUI.color = nodeEditor.GetTint();
-            GUILayout.BeginVertical(style);
-            GUI.color = highlighted ? Preferences.GetSettings().HighlightColor : default;
+            GUILayout.BeginVertical(nodeEditor.GetBodyStyle());
 
-            GUILayout.BeginVertical(verticalStyle);
+            GUI.color = highlighted ? Preferences.GetSettings().HighlightColor : default;
+            GUILayout.BeginVertical(nodeEditor.GetBodyHighlightStyle());
 
             GUI.color = guiColor;
-            EditorGUI.BeginChangeCheck();
 
-            //Draw node contents
-            nodeEditor.OnHeaderGUI();
-            nodeEditor.OnBodyGUI();
+            try
+            {
+                InNodeEditor = true;
+                nodeEditor.OnHeaderGUI();
+                nodeEditor.OnBodyGUI();
+            }
+            catch (Exception ex)
+            {
+                Debug.LogException(ex);
+            }
+            finally
+            {
+                InNodeEditor = false;
+            }
 
-            //If user changed a value, notify other scripts through onUpdateNode
-            if (EditorGUI.EndChangeCheck() && NodesToEditor.ContainsKey(nodeEditor.Value)/* the user could have deleted it while in OnBodyGUI */)
-                nodeEditor.SerializedObject.ApplyModifiedProperties();
+            if (EditorUtility.IsDirty(nodeEditor))
+            {
+                EditorUtility.ClearDirty(nodeEditor);
+                EditorUtility.SetDirty(Graph);
+            }
 
             GUILayout.EndVertical();
 
