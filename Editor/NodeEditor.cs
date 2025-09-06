@@ -53,18 +53,18 @@ namespace YNode.Editor
 
 
         /// <summary> Remove a dynamic port from the node </summary>
-        public void RemovePort(string fieldName, bool disconnect)
+        public void RemovePort(string fieldName, bool disconnect, bool undo)
         {
             Port? dynamicPort = GetPort(fieldName);
             if (dynamicPort == null) throw new ArgumentException($"port {fieldName} doesn't exist");
-            RemovePort(dynamicPort, disconnect);
+            RemovePort(dynamicPort, disconnect, undo);
         }
 
         /// <summary> Remove a dynamic port from the node </summary>
-        public void RemovePort(Port port, bool disconnect)
+        public void RemovePort(Port port, bool disconnect, bool undo)
         {
             if (disconnect)
-                port.Disconnect();
+                port.Disconnect(undo);
             _ports.Remove(port.FieldName);
         }
 
@@ -80,10 +80,10 @@ namespace YNode.Editor
         }
 
         /// <summary> Disconnect everything from this node </summary>
-        public void ClearConnections()
+        public void ClearConnections(bool undo)
         {
             foreach ((_, Port port) in _ports)
-                port.Disconnect();
+                port.Disconnect(undo);
         }
 
         public virtual void PreRemoval() { }

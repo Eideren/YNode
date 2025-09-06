@@ -225,17 +225,7 @@ namespace YNode.Editor
                     break;
                 case EventType.ValidateCommand:
                 case EventType.ExecuteCommand:
-                    if (e.commandName == "SoftDelete")
-                    {
-                        if (e.type == EventType.ExecuteCommand)
-                        {
-                            RemoveSelectedNodes();
-                            GUI.changed = true;
-                        }
-
-                        e.Use();
-                    }
-                    else if (Utilities.IsMac() && e.commandName == "Delete")
+                    if (e.commandName == "SoftDelete" || Utilities.IsMac() && e.commandName == "Delete")
                     {
                         if (e.type == EventType.ExecuteCommand)
                         {
@@ -318,7 +308,7 @@ namespace YNode.Editor
             foreach (var item in Selection.objects.ToArray())
             {
                 if (item is NodeEditor node)
-                    RemoveNode(node);
+                    RemoveNode(node, true);
             }
         }
 
@@ -376,7 +366,7 @@ namespace YNode.Editor
                     if (typeCount >= disallowAttrib.max) continue;
                 }
 
-                NodeEditor newNodeEditor = CopyNode(srcNodeEditor.Value);
+                NodeEditor newNodeEditor = CopyNode(srcNodeEditor.Value, true);
                 newNodeEditor.Value.Position = srcNodeEditor.Value.Position + offset;
                 newNodes[i] = newNodeEditor;
             }

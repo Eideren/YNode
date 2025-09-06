@@ -38,7 +38,7 @@ namespace YNode.Editor
             if (Port.Connected is not null)
             {
                 GUI.changed = true;
-                Port.Disconnect();
+                Port.Disconnect(true);
                 _draggedOutputTarget = Port.NodeEditor;
             }
         }
@@ -142,7 +142,7 @@ namespace YNode.Editor
                     // If connection is valid, save it
                     if (_draggedOutputTarget != null && Port.CanConnectTo(_draggedOutputTarget.Value.GetType()))
                     {
-                        Port.Connect(_draggedOutputTarget);
+                        Port.Connect(_draggedOutputTarget, true);
                     }
                     // Open context menu for auto-connection if there is no target node
                     else if (_draggedOutputTarget == null)
@@ -151,7 +151,7 @@ namespace YNode.Editor
                         if (Preferences.GetSettings().DragToCreate)
                         {
                             GenericMenu menu = new GenericMenu();
-                            Window.AddContextMenuItems(menu, Port.CanConnectTo, Port.Connect);
+                            Window.AddContextMenuItems(menu, Port.CanConnectTo, x => Port.Connect(x, true));
                             menu.DropDown(new Rect(Event.current.mousePosition, Vector2.zero));
                         }
                     }

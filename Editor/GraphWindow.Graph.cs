@@ -173,7 +173,7 @@ namespace YNode.Editor
                 else
                     menu.AddItem(new GUIContent(newPath), false, () =>
                     {
-                        var node = CreateNode(type, pos);
+                        var node = CreateNode(type, pos, true);
                         onNewNode?.Invoke(node);
                     });
             }
@@ -283,15 +283,17 @@ namespace YNode.Editor
         }
 
         /// <summary> Create a node and save it in the graph asset </summary>
-        public virtual NodeEditor CreateNode(Type type, Vector2 position)
+        public virtual NodeEditor CreateNode(Type type, Vector2 position, bool undo)
         {
-            Undo.RecordObject(Graph, "Create Node");
+            if (undo)
+                Undo.RecordObject(Graph, "Create Node");
             var node = Graph.AddNode(type);
             EditorUtility.SetDirty(Graph);
 
             var editor = InitNodeEditorFor(node);
 
-            Undo.RegisterCreatedObjectUndo(editor, "Create Node");
+            if (undo)
+                Undo.RegisterCreatedObjectUndo(editor, "Create Node");
             node.Position = position;
             Repaint();
             return editor;
@@ -314,14 +316,16 @@ namespace YNode.Editor
         }
 
         /// <summary> Creates a copy of the original node in the graph </summary>
-        public virtual NodeEditor CopyNode(INodeValue original)
+        public virtual NodeEditor CopyNode(INodeValue original, bool undo)
         {
-            Undo.RecordObject(Graph, "Duplicate Node");
+            if (undo)
+                Undo.RecordObject(Graph, "Duplicate Node");
             var node = Graph.CopyNode(original);
             EditorUtility.SetDirty(Graph);
             var editor = InitNodeEditorFor(node);
 
-            Undo.RegisterCreatedObjectUndo(editor, "Duplicate Node");
+            if (undo)
+                Undo.RegisterCreatedObjectUndo(editor, "Duplicate Node");
             Repaint();
             return editor;
         }
@@ -346,7 +350,7 @@ namespace YNode.Editor
         }
 
         /// <summary> Safely remove a node and all its connections. </summary>
-        public virtual void RemoveNode(NodeEditor nodeEditor)
+        public virtual void RemoveNode(NodeEditor nodeEditor, bool undo)
         {
             if (!CanRemove(nodeEditor)) return;
 
@@ -360,15 +364,18 @@ namespace YNode.Editor
             {
                 nodeEditor.PreRemoval();
 
-                // Remove the node
-                Undo.RecordObject(nodeEditor, "Delete Node");
-                Undo.RecordObject(Graph, "Delete Node");
+                if (undo)
+                {
+                    Undo.RecordObject(nodeEditor, "Delete Node");
+                    Undo.RecordObject(Graph, "Delete Node");
+                }
+
                 foreach (var editor in _nodesToEditor)
                 {
                     foreach (var port in editor.Value.Ports)
                     {
                         if (port.Value.Connected == nodeEditor.Value)
-                            port.Value.Disconnect();
+                            port.Value.Disconnect(undo);
                     }
                 }
 
@@ -376,7 +383,8 @@ namespace YNode.Editor
                 EditorUtility.SetDirty(Graph);
                 _nodesToEditor.Remove(nodeEditor.Value);
                 nodeEditor.ObjectTree.Dispose();
-                Undo.DestroyObjectImmediate(nodeEditor);
+                if (undo)
+                    Undo.DestroyObjectImmediate(nodeEditor);
             }
             finally
             {
@@ -384,14 +392,14 @@ namespace YNode.Editor
             }
         }
 
-        public void ReplaceConnection(NodeEditor nodeEditor, NodeEditor newEditor)
+        public void ReplaceConnection(NodeEditor nodeEditor, NodeEditor newEditor, bool undo)
         {
             foreach (var editor in _nodesToEditor)
             {
                 foreach (var port in editor.Value.Ports)
                 {
                     if (port.Value.Connected == nodeEditor.Value)
-                        port.Value.Connect(newEditor);
+                        port.Value.Connect(newEditor, undo);
                 }
             }
         }

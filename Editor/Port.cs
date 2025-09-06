@@ -63,23 +63,29 @@ namespace YNode.Editor
         }
 
         /// <summary> Connect this <see cref="Port" /> to another </summary>
-        public void Connect(NodeEditor newConnection)
+        public void Connect(NodeEditor newConnection, bool undo)
         {
             if (Connected == newConnection.Value)
             {
                 Debug.LogWarning("Port already connected. ");
                 return;
             }
-#if UNITY_EDITOR
-            Undo.RecordObjects(new[] { NodeEditor, newConnection }, "Connect Port");
-#endif
+
+            if (undo)
+                Undo.RecordObjects(new[] { NodeEditor, newConnection }, "Connect Port");
+
             _setConnection(newConnection.Value);
         }
 
         public bool CanConnectTo(Type type) => _canConnectTo(type);
 
         /// <summary> Disconnect this port from another port </summary>
-        public void Disconnect() => _setConnection(null);
+        public void Disconnect(bool undo)
+        {
+            if (undo)
+                Undo.RecordObject(NodeEditor, "Disconnect Port");
+            _setConnection(null);
+        }
 
         /// <summary> Get reroute points for a given connection. This is used for organization </summary>
         public List<Vector2> GetReroutePoints()

@@ -41,7 +41,7 @@ namespace YNode.Editor
                 var node = (NodeEditor)Property.Tree.WeakTargets[0];
                 var port = node.GetPort(Property.UnityPropertyPath);
                 if (port is not null)
-                    node.RemovePort(port, false);
+                    node.RemovePort(port, false, false);
             }
         }
 

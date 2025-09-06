@@ -159,12 +159,12 @@ namespace YNode.Editor
         private void ShowPortContextMenu(Port hoveredPort)
         {
             GenericMenu contextMenu = new GenericMenu();
-            contextMenu.AddItem(new GUIContent("Clear Connections"), false, hoveredPort.Disconnect);
+            contextMenu.AddItem(new GUIContent("Clear Connections"), false, () => hoveredPort.Disconnect(true));
             //Get compatible nodes with this port
             if (Preferences.GetSettings().CreateFilter)
             {
                 contextMenu.AddSeparator("");
-                AddContextMenuItems(contextMenu, hoveredPort.CanConnectTo, hoveredPort.Connect);
+                AddContextMenuItems(contextMenu, hoveredPort.CanConnectTo, x => hoveredPort.Connect(x, true));
             }
 
             contextMenu.DropDown(new Rect(Event.current.mousePosition, Vector2.zero));
@@ -612,7 +612,7 @@ namespace YNode.Editor
                 foreach (var (node2, editor2) in _nodesToEditor.ToArray())
                 {
                     if (Graph.Nodes.Contains(node2) == false)
-                        RemoveNode(editor2);
+                        RemoveNode(editor2, false);
                 }
                 break;
             }
