@@ -62,6 +62,40 @@ namespace YNode.Editor
                     e.Use();
 
                     break;
+
+                case EventType.MouseDown when e.button is 1 or 2:
+                    Port.GetReroutePoints().Add(Window.WindowToGridPosition(e.mousePosition));
+                    GUI.changed = true;
+                    e.Use();
+                    break;
+
+                case EventType.MouseUp when e.button == 0:
+
+                    // If connection is valid, save it
+                    if (_draggedOutputTarget != null && Port.CanConnectTo(_draggedOutputTarget.Value.GetType()))
+                    {
+                        Port.Connect(_draggedOutputTarget, true);
+                    }
+                    // Open context menu for auto-connection if there is no target node
+                    else if (_draggedOutputTarget == null)
+                    {
+                        Port.ClearReroute();
+                        if (Preferences.GetSettings().DragToCreate)
+                        {
+                            GenericMenu menu = new GenericMenu();
+                            Window.AddContextMenuItems(menu, Port.CanConnectTo, x => Port.Connect(x, true));
+                            menu.DropDown(new Rect(Event.current.mousePosition, Vector2.zero));
+                        }
+                    }
+
+                    //Release dragged connection
+                    _draggedOutputTarget = null;
+                    GUI.changed = true;
+                    Window.CurrentActivity = null;
+                    e.Use();
+                    Window.Repaint();
+
+                    break;
             }
         }
 
@@ -122,48 +156,6 @@ namespace YNode.Editor
 
         public override void InputPostDraw(Event e)
         {
-            switch (e.type)
-            {
-                case EventType.MouseDown when e.button == 0:
-                    Port.ClearReroute();
-                    Window.Repaint();
-                    GUI.changed = true;
-                    e.Use();
-                    break;
-
-                case EventType.MouseDown when e.button is 1 or 2:
-                    Port.GetReroutePoints().Add(Window.WindowToGridPosition(e.mousePosition));
-                    GUI.changed = true;
-                    e.Use();
-                    break;
-
-                case EventType.MouseUp when e.button == 0:
-
-                    // If connection is valid, save it
-                    if (_draggedOutputTarget != null && Port.CanConnectTo(_draggedOutputTarget.Value.GetType()))
-                    {
-                        Port.Connect(_draggedOutputTarget, true);
-                    }
-                    // Open context menu for auto-connection if there is no target node
-                    else if (_draggedOutputTarget == null)
-                    {
-                        Port.ClearReroute();
-                        if (Preferences.GetSettings().DragToCreate)
-                        {
-                            GenericMenu menu = new GenericMenu();
-                            Window.AddContextMenuItems(menu, Port.CanConnectTo, x => Port.Connect(x, true));
-                            menu.DropDown(new Rect(Event.current.mousePosition, Vector2.zero));
-                        }
-                    }
-
-                    //Release dragged connection
-                    _draggedOutputTarget = null;
-                    GUI.changed = true;
-                    Window.CurrentActivity = null;
-                    e.Use();
-
-                    break;
-            }
         }
     }
 
@@ -436,32 +428,5 @@ namespace YNode.Editor
         public override void PostNodeDraw() { }
 
         public override void InputPostDraw(Event e) { }
-    }
-
-    public class OdinSelectorOpen : NodeActivity
-    {
-        public OdinSelectorOpen(GraphWindow window) : base(window)
-        {
-        }
-
-        public override void InputPreDraw(Event e)
-        {
-            if (OdinObjectSelector.IsOpen == false && e.type == EventType.Repaint)
-            {
-                Window.CurrentActivity = null;
-            }
-        }
-
-        public override void PreNodeDraw()
-        {
-        }
-
-        public override void PostNodeDraw()
-        {
-        }
-
-        public override void InputPostDraw(Event e)
-        {
-        }
     }
 }

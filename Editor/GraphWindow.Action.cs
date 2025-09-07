@@ -39,8 +39,8 @@ namespace YNode.Editor
         protected virtual void ControlsPostDraw()
         {
             wantsMouseMove = true;
-            if (OdinObjectSelector.IsOpen && CurrentActivity is null)
-                CurrentActivity = new OdinSelectorOpen(this);
+            if (focusedWindow != this)
+                return;
 
             Event e = Event.current;
             if (CurrentActivity is not null)

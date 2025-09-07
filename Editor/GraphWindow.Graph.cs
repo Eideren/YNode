@@ -11,7 +11,7 @@ namespace YNode.Editor
     /// <summary> Base class to derive custom Node Graph editors from. Use this to override how graphs are drawn in the editor. </summary>
     public partial class GraphWindow
     {
-        public static bool InNodeEditor = false;
+        public static NodeEditor? InNodeEditor;
 
         private Dictionary<INodeValue, NodeEditor> _nodesToEditor = new();
         private HashSet<NodeEditor> _currentlyBeingRemoved = new();

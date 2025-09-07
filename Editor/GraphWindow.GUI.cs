@@ -30,6 +30,8 @@ namespace YNode.Editor
         /// <summary> Executed after all other window GUI. Useful if Zoom is ruining your day. Automatically resets after being run.</summary>
         public event Action? OnLateGUI;
 
+        public HashSet<NodeEditor> LossyConnectedEditors = new();
+
         protected virtual void OnGUI()
         {
             if (_ranLoad == false)
@@ -434,6 +436,8 @@ namespace YNode.Editor
             if (Event.current.type is EventType.Layout or EventType.Repaint == false)
                 return;
 
+            LossyConnectedEditors.Clear();
+
             if (Event.current.type == EventType.Layout)
                 _hoveredPort = null;
 
@@ -461,6 +465,7 @@ namespace YNode.Editor
 
                     if (port.ConnectedEditor is {} target)
                     {
+                        LossyConnectedEditors.Add(target);
                         var endPosition = GetNodeEndpointPosition(fromRect.center, target, port.Direction);
                         var toRect = new Rect(endPosition, default);
                         if (port.Direction == IO.Input)
@@ -729,7 +734,7 @@ namespace YNode.Editor
 
             try
             {
-                InNodeEditor = true;
+                InNodeEditor = nodeEditor;
                 nodeEditor.OnHeaderGUI();
                 nodeEditor.OnBodyGUI();
             }
@@ -739,7 +744,7 @@ namespace YNode.Editor
             }
             finally
             {
-                InNodeEditor = false;
+                InNodeEditor = null;
             }
 
             if (EditorUtility.IsDirty(nodeEditor))
