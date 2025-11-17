@@ -98,13 +98,6 @@ namespace YNode.Editor
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public Rect GridToWindowRectNoClipped(Rect gridRect)
-        {
-            gridRect.position = GridToWindowPositionNoClipped(gridRect.position);
-            return gridRect;
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public Rect GridToWindowRect(Rect gridRect)
         {
             gridRect.position = GridToWindowPosition(gridRect.position);
@@ -113,13 +106,9 @@ namespace YNode.Editor
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public Vector2 GridToWindowPositionNoClipped(Vector2 gridPosition)
+        public Vector2 GridToWindowPositionWeird(Vector2 gridPosition)
         {
-            Vector2 center = position.size * (0.5f * Zoom) + PanOffset + gridPosition;
-            // UI Sharpness complete fix - Round final offset not panOffset
-            center.x = Mathf.Round(center.x);
-            center.y = Mathf.Round(center.y);
-            return center;
+            return position.size * (0.5f * Zoom) + PanOffset + gridPosition;
         }
 
         public void SelectNode(NodeEditor nodeEditor, bool add)

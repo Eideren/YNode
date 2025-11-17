@@ -653,7 +653,7 @@ namespace YNode.Editor
 
         private Vector2 GetStickyWindowPosition(NodeEditor nodeEditor)
         {
-            Vector2 nodePos = GridToWindowPositionNoClipped(nodeEditor.Value.Position);
+            Vector2 nodePos = GridToWindowPositionWeird(nodeEditor.Value.Position);
 
             if (nodePos.x < 0)
                 nodePos.x = 0;
@@ -700,7 +700,7 @@ namespace YNode.Editor
             }
 
             //Get node position
-            Vector2 nodePos = GridToWindowPositionNoClipped(nodeEditor.Value.Position);
+            Vector2 nodePos = GridToWindowPositionWeird(nodeEditor.Value.Position);
             if (sticky)
             {
                 if (nodePos.x < 0)
@@ -796,7 +796,7 @@ namespace YNode.Editor
             if (_firstRun)
                 return false;
 
-            Vector2 nodePos = GridToWindowPositionNoClipped(nodeEditor.Value.Position);
+            Vector2 nodePos = GridToWindowPositionWeird(nodeEditor.Value.Position);
             if (nodePos.x / _zoom > position.width) return true; // Right
             else if (nodePos.y / _zoom > position.height) return true; // Bottom
             else if (nodeEditor.CachedSize != default)
