@@ -642,10 +642,10 @@ namespace YNode.Editor
                     GUI.color = new Color(0, 0, 0, 0.5f);
                     GUI.DrawTexture(Rect.MinMaxRect(-10000, -10000, 10000, 10000), Texture2D.whiteTexture);
                     GUI.color = prevColor;
-                }
 
-                foreach (var editor in _stickyEditors)
-                    DrawNodeEditor(e, editor, true, guiColor, mousePos);
+                    foreach (var editor in _stickyEditors)
+                        DrawNodeEditor(e, editor, true, guiColor, mousePos);
+                }
             }
 
             EndZoomed(position, Zoom, TopPadding);
@@ -754,6 +754,7 @@ namespace YNode.Editor
             }
 
             GUILayout.EndVertical();
+            GUILayout.EndVertical();
 
             //Cache data about the node for next frame
             if (e.type == EventType.Repaint)
@@ -777,8 +778,6 @@ namespace YNode.Editor
                     port.CachedRect = rect;
                 }
             }
-
-            GUILayout.EndVertical();
 
             if (e.type != EventType.Layout)
             {

@@ -92,6 +92,8 @@ namespace YNode.Editor
         {
             _title ??= ObjectNames.NicifyVariableName(Value.GetType().Name);
             GUILayout.Label(_title, Resources.Styles.NodeHeader, GUILayout.Height(TitleHeight));
+
+            AddCursorRectFromBody(GUILayoutUtility.GetLastRect(), MouseCursor.Pan);
         }
 
         /// <summary> Draws standard field editors for all public fields </summary>
@@ -178,8 +180,6 @@ namespace YNode.Editor
 
         protected void DrawEditableTitle(ref string title)
         {
-            const string ID = "NodeEditor_DrawEditableTitle";
-
             var c = new GUIContent(title);
             Resources.Styles.NodeHeader.CalcMinMaxWidth(c, out float minWidth, out float maxWidth);
             minWidth = MathF.Max(10, minWidth);
@@ -191,28 +191,17 @@ namespace YNode.Editor
 
             AddCursorRectFromBody(titleRect, MouseCursor.Text);
             var e = Event.current;
-            if (e.clickCount == 2 && e.button == 0 && titleRect.Contains(e.mousePosition))
-            {
-                e.Use();
-                Window.CurrentActivity = new EditTitleActivity(this, Window);
-            }
-
-            if (Window.CurrentActivity is EditTitleActivity edit && edit.Editor == this)
-            {
-                GUI.SetNextControlName(ID);
-                title = EditorGUI.TextField(titleRect, title, Resources.Styles.NodeHeader);
-
-                if (GUI.GetNameOfFocusedControl() == ID && EditorGUIUtility.editingTextField) // Successfully swapped focus
-                    edit.Focused = true;
-                else if (edit.Focused == false) // Not in focus and has never been, set the focus
-                    EditorGUI.FocusTextInControl(ID);
-                else if (edit.Focused) // Not in focus right now but has been before, user swapped focus, close off activity
-                    Window.CurrentActivity = null;
-            }
-            else
+            // Prevent focus on this text unless the user specifically double-clicked on the title of this node
+            if (e.type is EventType.MouseDown
+                && e.clickCount != 2
+                && e.button == 0
+                && titleRect.Contains(e.mousePosition)
+                && GUIUtility.keyboardControl == 0)
             {
                 GUI.Label(titleRect, title, Resources.Styles.NodeHeader);
             }
+            else
+                title = EditorGUI.TextField(titleRect, title, Resources.Styles.NodeHeader);
         }
 
         protected void AddCursorRectFromBody(Rect r, MouseCursor m, int controlID = 0)
@@ -233,21 +222,5 @@ namespace YNode.Editor
 
         private static readonly Refl_AddCursorRect? s_internalAddCursorRect;
         delegate void Refl_AddCursorRect(Rect r, MouseCursor m, int controlID);
-
-        public class EditTitleActivity : NodeActivity
-        {
-            public NodeEditor Editor;
-            public bool Focused = false;
-
-            public EditTitleActivity(NodeEditor editor, GraphWindow window) : base(window) => Editor = editor;
-
-            public override void InputPreDraw(Event e) { }
-
-            public override void PreNodeDraw() { }
-
-            public override void PostNodeDraw() { }
-
-            public override void InputPostDraw(Event e) { }
-        }
     }
 }
