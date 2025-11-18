@@ -4,6 +4,7 @@ using Sirenix.OdinInspector.Editor;
 using Sirenix.Utilities.Editor;
 using UnityEditor;
 using UnityEngine;
+using UnityEngine.Scripting;
 
 namespace YNode.Editor
 {
@@ -75,7 +76,8 @@ namespace YNode.Editor
         /// <summary> Make a field for a serialized property. Manual node port override. </summary>
         private void PropertyField(GUIContent? label, Port port)
         {
-            if (Property.GetAttribute<RequiredAttribute>() is not null && ValueEntry.SmartValue == null)
+            if ((Property.GetAttribute<RequiredAttribute>() is not null || Property.GetAttribute<RequiredMemberAttribute>() is not null)
+                && ValueEntry.SmartValue == null)
             {
                 SirenixEditorGUI.ErrorMessageBox($"{Property.NiceName} is required");
             }
