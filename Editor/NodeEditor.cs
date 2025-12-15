@@ -125,6 +125,19 @@ namespace YNode.Editor
                     GUIHelper.ClearRepaintRequest();
                     Window.Repaint();
                 }
+
+                if (Utilities.GetAttrib<NodeVisualsAttribute>(Value.GetType(), out var visualsAttrib) && visualsAttrib.Icon is { } iconPath)
+                {
+                    var previousColor = GUI.color;
+                    GUI.color = new Color(1,1,1,0.5f);
+                    var rect = new Rect(6, 6, 24, 24);
+                    if (Window.Zoom > 2)
+                    {
+                        GUI.color = new Color(1,1,1,1);
+                    }
+                    GUI.DrawTexture(rect, EditorGUIUtility.IconContent(iconPath).image);
+                    GUI.color = previousColor;
+                }
             }
             finally
             {
@@ -135,7 +148,7 @@ namespace YNode.Editor
         public virtual int GetWidth()
         {
             Type type = Value.GetType();
-            return type.TryGetAttributeWidth(out var width) ? width : NodeWidthAttribute.Default;
+            return type.TryGetAttributeWidth(out var width) ? width : NodeVisualsAttribute.DefaultWidth;
         }
 
         public virtual bool HitTest(Rect rect, Vector2 mousePosition)

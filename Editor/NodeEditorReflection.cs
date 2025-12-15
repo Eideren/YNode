@@ -11,7 +11,7 @@ namespace YNode.Editor
     /// <summary> Contains reflection-related extensions built for xNode </summary>
     public static class NodeEditorReflection
     {
-        [NonSerialized] private static Dictionary<Type, Color>? s_nodeTint;
+        [NonSerialized] private static Dictionary<Type, Color?>? s_nodeTint;
         [NonSerialized] private static Dictionary<Type, int>? s_nodeWidth;
 
         [NonSerialized] private static Type[]? s_nodeTypes = null;
@@ -33,10 +33,17 @@ namespace YNode.Editor
         {
             if (s_nodeTint == null)
             {
-                CacheAttributes<Color, NodeTintAttribute>(out s_nodeTint, x => x.color);
+                CacheAttributes<Color?, NodeVisualsAttribute>(out s_nodeTint, x => x.Tint);
             }
 
-            return s_nodeTint.TryGetValue(nodeType, out tint);
+            if (s_nodeTint.TryGetValue(nodeType, out var nullableTint) && nullableTint.HasValue)
+            {
+                tint = nullableTint.Value;
+                return true;
+            }
+
+            tint = default;
+            return  false;
         }
 
         /// <summary> Get custom node widths defined with [NodeWidth(width)] </summary>
@@ -44,7 +51,7 @@ namespace YNode.Editor
         {
             if (s_nodeWidth == null)
             {
-                CacheAttributes<int, NodeWidthAttribute>(out s_nodeWidth, x => x.width);
+                CacheAttributes<int, NodeVisualsAttribute>(out s_nodeWidth, x => x.Width);
             }
 
             if (nodeType.IsGenericType)

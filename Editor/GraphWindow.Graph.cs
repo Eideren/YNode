@@ -142,11 +142,15 @@ namespace YNode.Editor
                     disallowed = typeCount >= disallowAttrib.max;
                 }
 
+                Texture? icon = null;
+                if (Utilities.GetAttrib<NodeVisualsAttribute>(type, out var visualsAttrib) && visualsAttrib.Icon is {} iconPath)
+                    icon = EditorGUIUtility.IconContent(iconPath).image;
+
                 // Add node entry to context menu
                 if (disallowed)
                     menu.AddItem(new GUIContent(path), false, null!);
                 else
-                    menu.AddItem(new GUIContent(path), false, () =>
+                    menu.AddItem(new GUIContent(path, icon, type.FullName), false, () =>
                     {
                         var node = CreateNode(type, pos, true);
                         onNewNode?.Invoke(node);

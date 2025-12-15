@@ -126,7 +126,7 @@ namespace YNode.Editor
         {
             //var parent = FindParent( content.text );
             var item = FindOrCreateItem(content.text);
-            item.Set(true /*on*/, null, func);
+            item.Set(true /*on*/, content.image as Texture2D, func);
         }
 
         public void AddItem(string name, bool on, MenuFunction2 func, object userData)
@@ -138,7 +138,7 @@ namespace YNode.Editor
         {
             //var parent = FindParent( content.text );
             var item = FindOrCreateItem(content.text);
-            item.Set(true /*on*/, null, null, func, userData);
+            item.Set(true /*on*/, content.image as Texture2D, null, func, userData);
         }
 
         //
