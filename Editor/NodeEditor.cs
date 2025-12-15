@@ -16,6 +16,7 @@ namespace YNode.Editor
         public const int TitleHeight = 30;
 
         private string? _title;
+        private Dictionary<string, Port> _portsRecycling = new();
         private Dictionary<string, Port> _ports = new();
 
         [SkipPolymorphicField, SerializeReference, HideLabel, InlineProperty, ShowInInspector]
@@ -46,7 +47,16 @@ namespace YNode.Editor
                 return _ports[fieldName];
             }
 
-            var port = new Port(fieldName, this, type, direction, getConnected, canConnectTo, setConnection, stroke, tooltip);
+            if (_portsRecycling.Remove(fieldName, out var port)
+                && port.TryReuseFor(fieldName, this, type, direction, getConnected, canConnectTo, setConnection, stroke, tooltip))
+            {
+
+            }
+            else
+            {
+                port = new Port(fieldName, this, type, direction, getConnected, canConnectTo, setConnection, stroke, tooltip);
+            }
+
             _ports.Add(fieldName, port);
             return port;
         }
@@ -66,6 +76,8 @@ namespace YNode.Editor
             if (disconnect)
                 port.Disconnect(undo);
             _ports.Remove(port.FieldName);
+            _portsRecycling[port.FieldName] = port;
+            port.MarkRecycled();
         }
 
         /// <summary> Returns port which matches fieldName </summary>

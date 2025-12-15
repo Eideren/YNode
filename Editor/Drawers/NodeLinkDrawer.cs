@@ -29,6 +29,7 @@ namespace YNode.Editor
             var attrib = Property.Attributes.GetAttribute<IOAttribute>();
             var io = attrib is OutputAttribute ? IO.Output : IO.Input;
             node.AddPort(Property.UnityPropertyPath, valueType, io, GetConnected, CanConnectTo, SetConnection, attrib.Stroke, tooltip);
+            node.Window.Repaint();
 
             void SetConnection(INodeValue? node1) => ValueEntry.WeakSmartValue = node1!;
             INodeValue? GetConnected() => (INodeValue?)ValueEntry.WeakSmartValue;

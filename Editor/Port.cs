@@ -14,11 +14,9 @@ namespace YNode.Editor
 
     public class Port
     {
-        private readonly CanConnectTo _canConnectTo;
-
-        private readonly GetConnected _getConnected;
-
-        private readonly SetConnection _setConnection;
+        private CanConnectTo _canConnectTo;
+        private GetConnected _getConnected;
+        private SetConnection _setConnection;
 
         public IO Direction { get; }
         public string FieldName { get; }
@@ -48,7 +46,24 @@ namespace YNode.Editor
             }
         }
 
-        /// <summary> Construct a dynamic port. Dynamic ports are not forgotten on reimport, and is ideal for runtime-created ports. </summary>
+        public bool TryReuseFor(string fieldName, NodeEditor nodeEditorParam, Type type, IO direction, GetConnected getConnected, CanConnectTo canConnectTo, SetConnection setConnection, NoodleStroke stroke, string? tooltip = null)
+        {
+            if (FieldName == fieldName &&
+                ValueType == type &&
+                Direction == direction &&
+                NodeEditor == nodeEditorParam &&
+                Stroke == stroke &&
+                Tooltip == (tooltip ?? ValueType.Name))
+            {
+                _getConnected = getConnected;
+                _canConnectTo = canConnectTo;
+                _setConnection = setConnection;
+                return true;
+            }
+
+            return false;
+        }
+
         public Port(string fieldName, NodeEditor nodeEditorParam, Type type, IO direction, GetConnected getConnected, CanConnectTo canConnectTo, SetConnection setConnection, NoodleStroke stroke, string? tooltip = null)
         {
             FieldName = fieldName;
@@ -103,6 +118,13 @@ namespace YNode.Editor
         public void ClearReroute()
         {
             NodeEditor.ReroutePoints.Remove(FieldName);
+        }
+
+        public void MarkRecycled()
+        {
+            _canConnectTo = null!;
+            _getConnected = null!;
+            _setConnection = null!;
         }
     }
 }
