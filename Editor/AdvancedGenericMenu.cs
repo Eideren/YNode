@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using UnityEditor;
 using UnityEditor.IMGUI.Controls;
 using UnityEngine;
 using static UnityEditor.GenericMenu;
@@ -186,12 +187,32 @@ namespace YNode.Editor
             foreach (var m in _items)
             {
                 if (m == null)
+                {
                     root.AddSeparator();
-                else
-                    root.AddChild(m);
+                    continue;
+                }
+
+                RootDirectories(m, root, 0);
             }
 
             return root;
+
+            static void RootDirectories(AdvancedDropdownItem item, AdvancedDropdownItem root, int rec)
+            {
+                if (item.children.Any())
+                {
+                    root.AddChild(new AdvancedDropdownItem($"{new string(' ', rec*2)}{item.name}"){ enabled = false, icon = EditorGUIUtility.IconContent("d_Toolbar Minus").image as Texture2D });
+                    foreach (var advancedDropdownItem in item.children)
+                    {
+                        RootDirectories(advancedDropdownItem, root, rec+1);
+                    }
+                    root.AddSeparator();
+                }
+                else
+                {
+                    root.AddChild(item);
+                }
+            }
         }
 
         protected override void ItemSelected(AdvancedDropdownItem item)

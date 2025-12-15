@@ -125,21 +125,15 @@ namespace YNode.Editor
                 nodeTypes = NodeEditorReflection.NodeTypes.OrderBy(GetNodeMenuOrder).ToArray();
             }
 
-            var menuItems = new List<(string path, Type type)>();
-            for (int i = 0; i < nodeTypes.Length; i++)
+            foreach (var type in nodeTypes
+                         .OrderBy(x => x.Assembly.FullName)
+                         .ThenBy(x => x.Namespace)
+                         .ThenBy(x => x.Name))
             {
-                Type type = nodeTypes[i];
-
-                //Get node context menu path
                 string path = GetNodeMenuName(type);
                 if (string.IsNullOrEmpty(path))
                     continue;
 
-                menuItems.Add((path, type));
-            }
-
-            foreach (var (path, type) in menuItems)
-            {
                 // Check if user is allowed to add more of given node type
                 bool disallowed = false;
                 if (Utilities.GetAttrib<DisallowMultipleNodesAttribute>(type, out var disallowAttrib))
@@ -148,30 +142,11 @@ namespace YNode.Editor
                     disallowed = typeCount >= disallowAttrib.max;
                 }
 
-                var splitPath = path.Split('/').Select(x => (path:x, merge:true)).ToArray();
-                foreach (var menuItem in menuItems)
-                {
-                    if (ReferenceEquals(menuItem.path, path))
-                        continue;
-
-                    var otherSplitPath = menuItem.path.Split('/');
-                    for (int i = 0; i < otherSplitPath.Length-1 && i < splitPath.Length-1; i++)
-                    {
-                        if (otherSplitPath[i] == splitPath[i].path && otherSplitPath[i+1] != splitPath[i+1].path)
-                        {
-                            splitPath[i].merge = false;
-                            break;
-                        }
-                    }
-                }
-
-                var newPath = string.Concat(splitPath.Select(x => x.merge ? $"{x.path}." : $"{x.path}/"))[..^1];
-
                 // Add node entry to context menu
                 if (disallowed)
-                    menu.AddItem(new GUIContent(newPath), false, null!);
+                    menu.AddItem(new GUIContent(path), false, null!);
                 else
-                    menu.AddItem(new GUIContent(newPath), false, () =>
+                    menu.AddItem(new GUIContent(path), false, () =>
                     {
                         var node = CreateNode(type, pos, true);
                         onNewNode?.Invoke(node);
