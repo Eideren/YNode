@@ -77,7 +77,7 @@ namespace YNode.Editor
         /// <summary> Make a field for a serialized property. Manual node port override. </summary>
         private void PropertyField(GUIContent? label, Port port)
         {
-            if ((Property.GetAttribute<RequiredAttribute>() is not null || Property.GetAttribute<RequiredMemberAttribute>() is not null)
+            if ((Property.Info.GetAttribute<RequiredAttribute>() is not null || Property.Info.GetAttribute<RequiredMemberAttribute>() is not null)
                 && ValueEntry.SmartValue == null)
             {
                 SirenixEditorGUI.ErrorMessageBox($"{Property.NiceName} is required");

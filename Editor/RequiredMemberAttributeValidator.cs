@@ -6,8 +6,8 @@ public class RequiredMemberAttributeValidator<T> : AttributeValidator<System.Run
 {
     protected override void Validate(ValidationResult result)
     {
-        var d = Property.ValueEntry.WeakSmartValue;
-        switch (d)
+        object? weakValue = Property.ValueEntry.WeakSmartValue;
+        switch (weakValue)
         {
             case UnityEngine.Object o:
             {
@@ -30,7 +30,7 @@ public class RequiredMemberAttributeValidator<T> : AttributeValidator<System.Run
             }
             default:
             {
-                if (d.Equals(default(T)))
+                if (weakValue.Equals(default(T)))
                     goto case null;
 
                 return;
