@@ -119,9 +119,13 @@ namespace YNode.Editor
                 ObjectTree.DrawProperties();
                 GUIHelper.PopLabelWidth();
 
-                // This is often unnecessarily called by odin's array editor, we're swallowing it
+                // Only comply with repaint requests if the editor has visual focus
                 if (GUIHelper.RepaintRequested)
+                {
                     GUIHelper.ClearRepaintRequest();
+                    if (Window.HoveredNode == this)
+                        Window.Repaint();
+                }
 
                 if (Utilities.GetAttrib<NodeVisualsAttribute>(Value.GetType(), out var visualsAttrib) && visualsAttrib.Icon is { } iconPath)
                 {
