@@ -560,9 +560,6 @@ namespace YNode.Editor
         private void DrawNodes()
         {
             Event e = Event.current;
-            if (e.type != EventType.Layout)
-                _hoveredNode = null;
-
             if (CurrentActivity is not null && e.type is not EventType.Layout and not EventType.Repaint)
                 return; // Do not pass input Events to nodes when doing an activity, improves performance of activities
 
@@ -625,6 +622,7 @@ namespace YNode.Editor
             {
                 var arr = ArrayPool<NodeEditor>.Shared.Rent(_nodesToEditor.Values.Count);
                 _nodesToEditor.Values.CopyTo(arr, 0); // this collection may be modified while iterated
+                var oldHovered = _hoveredNode;
                 for (int i = 0, c = _nodesToEditor.Count; i < c; i++)
                 {
                     NodeEditor? editor = arr[i];
@@ -646,6 +644,9 @@ namespace YNode.Editor
                     foreach (var editor in _stickyEditors)
                         DrawNodeEditor(e, editor, true, guiColor, mousePos);
                 }
+
+                if (oldHovered != _hoveredNode)
+                    Repaint();
             }
 
             EndZoomed(position, Zoom, TopPadding);
@@ -718,6 +719,15 @@ namespace YNode.Editor
                 }
             }
 
+            var previousHover = _hoveredNode;
+            {
+                var nodeRect = new Rect(nodePos, nodeEditor.CachedSize);
+                if (nodeRect.Contains(mousePos) && nodeEditor.HitTest(nodeRect, mousePos))
+                    _hoveredNode = nodeEditor;
+                else if (_hoveredNode == nodeEditor)
+                    _hoveredNode = null;
+            }
+
             GUILayout.BeginArea(new Rect(nodePos, new Vector2(nodeEditor.GetWidth(), 4000)));
 
             bool highlighted = Selection.objects.Contains(nodeEditor);
@@ -761,6 +771,12 @@ namespace YNode.Editor
             {
                 Vector2 size = GUILayoutUtility.GetLastRect().size;
                 nodeEditor.CachedSize = size;
+                if (_hoveredNode == nodeEditor) // Correct data if size changed too drastically
+                {
+                    var nodeRect = new Rect(nodePos, nodeEditor.CachedSize);
+                    if ((nodeRect.Contains(mousePos) && nodeEditor.HitTest(nodeRect, mousePos)) == false)
+                        _hoveredNode = previousHover == _hoveredNode ? null : previousHover;
+                }
 
                 foreach (var (_, port) in nodeEditor.Ports)
                 {
@@ -777,15 +793,6 @@ namespace YNode.Editor
                     Rect rect = new Rect(portHandlePos.x - 8, portHandlePos.y - 8, 16, 16);
                     port.CachedRect = rect;
                 }
-            }
-
-            if (e.type != EventType.Layout)
-            {
-                //Check if we are hovering this node
-                Vector2 nodeSize = GUILayoutUtility.GetLastRect().size;
-                Rect nodeRect = new Rect(nodePos, nodeSize);
-                if (nodeRect.Contains(mousePos) && nodeEditor.HitTest(nodeRect, mousePos))
-                    _hoveredNode = nodeEditor;
             }
 
             GUILayout.EndArea();
@@ -834,19 +841,17 @@ namespace YNode.Editor
 
             string? tooltip = null;
             if (_hoveredPort != null)
-            {
                 tooltip = GetPortTooltip(_hoveredPort);
-            }
             else if (_hoveredNode != null && _hoveredNode != null && IsHoveringTitle(_hoveredNode))
-            {
                 tooltip = _hoveredNode.GetHeaderTooltip();
-            }
 
-            if (string.IsNullOrEmpty(tooltip)) return;
-            GUIContent content = new GUIContent(tooltip);
-            Vector2 size = Resources.Styles.Tooltip.CalcSize(content);
+            if (string.IsNullOrEmpty(tooltip))
+                return;
+
+            var content = new GUIContent(tooltip);
+            var size = Resources.Styles.Tooltip.CalcSize(content);
             size.x += 8;
-            Rect rect = new Rect(Event.current.mousePosition - (size*new Vector2(0.5f, 1f)), size);
+            var rect = new Rect(Event.current.mousePosition - (size*new Vector2(0.5f, 1f)), size);
             EditorGUI.LabelField(rect, content, Resources.Styles.Tooltip);
             Repaint();
         }

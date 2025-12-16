@@ -119,19 +119,16 @@ namespace YNode.Editor
                 ObjectTree.DrawProperties();
                 GUIHelper.PopLabelWidth();
 
-                // Call repaint so that the graph window elements respond properly to layout changes coming from Odin
+                // This is often unnecessarily called by odin's array editor, we're swallowing it
                 if (GUIHelper.RepaintRequested)
-                {
                     GUIHelper.ClearRepaintRequest();
-                    Window.Repaint();
-                }
 
                 if (Utilities.GetAttrib<NodeVisualsAttribute>(Value.GetType(), out var visualsAttrib) && visualsAttrib.Icon is { } iconPath)
                 {
                     var previousColor = GUI.color;
                     GUI.color = new Color(1,1,1,0.5f);
                     var rect = new Rect(6, 6, 24, 24);
-                    if (Window.Zoom > 2)
+                    if (Window.Zoom > 2 || Window.HoveredNode == this)
                     {
                         GUI.color = new Color(1,1,1,1);
                     }
