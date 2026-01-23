@@ -1,1 +1,1 @@
--langVersion:preview -nullable
+-langVersion:preview -nullable -doc:Library/StreamingAssets/YNodeEditor.xml -nowarn:1591
