@@ -12,10 +12,11 @@ using UnityEngine;
 
 namespace YNode.Editor
 {
-    [DrawerPriority(DrawerPriorityLevel.SuperPriority)]
-    public sealed class SummaryTooltipDrawer : OdinDrawer
+    [DrawerPriority(100, 0, 0)]
+    public sealed class TooltipDrawer : OdinDrawer
     {
-        private bool? _hasAttribute;
+        private string? _hasAttribute;
+        private GUIContent _content = new();
 
         public override bool CanDrawProperty(InspectorProperty property)
         {
@@ -32,30 +33,39 @@ namespace YNode.Editor
 
         protected override void DrawPropertyLayout(GUIContent? label)
         {
-            var infoIconRect = GUILayoutUtility.GetLastRect();
-            infoIconRect.y += infoIconRect.height + 2;
+            var infoIconRect = GUILayoutUtility.GetRect(0, 0, 0, 0);
+            infoIconRect.y += 2;
             infoIconRect.height = EditorGUIUtility.singleLineHeight;
             infoIconRect.x = 0;
             infoIconRect.width = EditorGUIUtility.singleLineHeight;
 
-            bool hasSummary = false;
-            if (Property.Info.GetMemberInfo() is { } memberInfo && TryGetSummary(memberInfo, out var summary))
+            _hasAttribute ??= (Property.Attributes.FirstOrDefault(x => x.GetType() == typeof(TooltipAttribute)) as TooltipAttribute)?.tooltip ?? "";
+            string? summary;
+            if (string.IsNullOrEmpty(_hasAttribute) == false)
             {
-                hasSummary = true;
+                summary = _hasAttribute;
+            }
+            else if (Property.Info.GetMemberInfo() is { } memberInfo && TryGetSummary(memberInfo, out summary))
+            {
                 if (label != null && string.IsNullOrEmpty(label.tooltip))
                     label.tooltip = summary;
+            }
+            else
+            {
+                summary = null;
             }
 
             CallNextDrawer(label);
 
-            _hasAttribute ??= Property.Attributes.Any(x => x.GetType() == typeof(TooltipAttribute));
-
-            if (hasSummary || _hasAttribute.Value)
+            if (summary is not null)
             {
                 var c = GUI.color;
                 GUI.color *= new Color(1, 1, 1, 0.25f);
                 GUI.DrawTexture(infoIconRect, EditorGUIUtility.IconContent("_Help@2x").image);
                 GUI.color = c;
+
+                _content.tooltip = summary;
+                GUI.Label(infoIconRect, _content);
             }
         }
 
@@ -80,7 +90,7 @@ namespace YNode.Editor
         private static readonly Dictionary<(string typeName, string memberName), string> s_summaries = new();
         private static bool s_done;
 
-        static SummaryTooltipDrawer()
+        static TooltipDrawer()
         {
             Task.Run(FillXmlCache);
 
