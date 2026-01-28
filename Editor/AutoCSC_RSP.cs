@@ -30,6 +30,11 @@ namespace YNode.Editor
                                 continue;
                             }
 
+                            if (Path.GetFileNameWithoutExtension(asmdefPath).StartsWith("UnityEngine.")
+                                || Path.GetFileNameWithoutExtension(asmdefPath).StartsWith("UnityEditor.")
+                                || Path.GetFileNameWithoutExtension(asmdefPath).StartsWith("Unity."))
+                                continue;
+
                             var csc = Path.Combine(Path.GetDirectoryName(asmdefPath), "csc.rsp");
                             var cscMeta = Path.Combine(Path.GetDirectoryName(asmdefPath), "csc.rsp.meta");
                             string content;
