@@ -101,6 +101,9 @@ namespace YNode.Editor
                     var projectRoot = Directory.GetParent(Application.dataPath)!.FullName;
                     var xmlsPath = Path.Combine(projectRoot, "Library/StreamingAssets/");
 
+                    if (Directory.Exists(xmlsPath) == false)
+                        return;
+
                     foreach (string xml in Directory.EnumerateFiles(xmlsPath, "*.xml", SearchOption.AllDirectories))
                     {
                         var doc = XDocument.Load(xml);
