@@ -445,7 +445,7 @@ namespace YNode.Editor
             foreach ((_, NodeEditor node) in _nodesToEditor)
             {
                 // Draw full connections and output > reroute
-                foreach ((_, Port port) in node.Ports)
+                foreach ((_, Port port) in node.ActivePorts)
                 {
                     //Needs cleanup. Null checks are ugly
                     Rect fromRect = port.CachedRect;
@@ -584,7 +584,7 @@ namespace YNode.Editor
                             continue;
 
                         _stickyEditors.Add(editor);
-                        foreach (var kvp in editor.Ports)
+                        foreach (var kvp in editor.ActivePorts)
                         {
                             var connection = kvp.Value.ConnectedEditor;
                             if (connection is not null)
@@ -593,7 +593,7 @@ namespace YNode.Editor
 
                         foreach (var (otherNode, otherEditor) in _nodesToEditor)
                         {
-                            foreach (var (path, port) in otherEditor.Ports)
+                            foreach (var (path, port) in otherEditor.ActivePorts)
                             {
                                 if (port.Connected != editor.Value)
                                     continue;
@@ -696,7 +696,7 @@ namespace YNode.Editor
 
             if (e.type == EventType.Repaint)
             {
-                foreach (var (_, port) in nodeEditor.Ports)
+                foreach (var (_, port) in nodeEditor.ActivePorts)
                     port.CachedRect = default;
             }
 
@@ -745,6 +745,7 @@ namespace YNode.Editor
             try
             {
                 InNodeEditor = nodeEditor;
+                nodeEditor.ActivePorts.Clear();
                 nodeEditor.OnHeaderGUI();
                 nodeEditor.OnBodyGUI();
             }
@@ -778,7 +779,7 @@ namespace YNode.Editor
                         _hoveredNode = previousHover == _hoveredNode ? null : previousHover;
                 }
 
-                foreach (var (_, port) in nodeEditor.Ports)
+                foreach (var (_, port) in nodeEditor.ActivePorts)
                 {
                     Vector2 portHandlePos;
                     if (port.Direction == IO.Output)

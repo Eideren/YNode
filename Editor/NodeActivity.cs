@@ -213,7 +213,7 @@ namespace YNode.Editor
                         Vector2 offset = node.Value.Position - initial;
                         if (offset.sqrMagnitude > 0)
                         {
-                            foreach (var (_, port) in node.Ports)
+                            foreach (var (_, port) in node.ActivePorts)
                             {
                                 Rect rect = port.CachedRect;
                                 rect.position += offset;
@@ -387,7 +387,7 @@ namespace YNode.Editor
                 if (nodeRect.Overlaps(gridSpaceSelection))
                     _selectedEditors.Add(node);
 
-                foreach ((_, Port port) in node.Ports)
+                foreach ((_, Port port) in node.ActivePorts)
                 {
                     if (port.Connected is not null && port.TryGetReroutePoints(out var reroutePoints))
                     {

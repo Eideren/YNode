@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using Sirenix.OdinInspector;
 using Sirenix.OdinInspector.Editor;
 using Sirenix.Utilities.Editor;
@@ -15,9 +16,8 @@ namespace YNode.Editor
     {
         public const int TitleHeight = 30;
 
+        private Dictionary<string, Port> _allPorts = new();
         private string? _title;
-        private Dictionary<string, Port> _portsRecycling = new();
-        private Dictionary<string, Port> _ports = new();
 
         [SkipPolymorphicField, SerializeReference, HideLabel, InlineProperty, ShowInInspector]
         public INodeValue Value = null!;
@@ -33,7 +33,7 @@ namespace YNode.Editor
         public NodeGraph Graph => Window.Graph;
 
         /// <summary> Iterate over all ports on this node. </summary>
-        public Dictionary<string, Port> Ports => _ports;
+        public Dictionary<string, Port> ActivePorts { get; private set; } = new();
 
         public bool IsSelected() => Selection.Contains(this);
 
@@ -41,13 +41,7 @@ namespace YNode.Editor
         public Port AddPort(string fieldName, Type type, IO direction, GetConnected getConnected,
             CanConnectTo canConnectTo, SetConnection setConnection, NoodleStroke stroke, string? tooltip = null)
         {
-            if (HasPort(fieldName))
-            {
-                Debug.LogWarning($"Port '{fieldName}' already exists in {name}", this);
-                return _ports[fieldName];
-            }
-
-            if (_portsRecycling.Remove(fieldName, out var port)
+            if (_allPorts.Remove(fieldName, out var port)
                 && port.TryReuseFor(fieldName, this, type, direction, getConnected, canConnectTo, setConnection, stroke, tooltip))
             {
 
@@ -57,7 +51,7 @@ namespace YNode.Editor
                 port = new Port(fieldName, this, type, direction, getConnected, canConnectTo, setConnection, stroke, tooltip);
             }
 
-            _ports.Add(fieldName, port);
+            _allPorts.Add(fieldName, port);
             return port;
         }
 
@@ -65,8 +59,9 @@ namespace YNode.Editor
         /// <summary> Remove a dynamic port from the node </summary>
         public void RemovePort(string fieldName, bool disconnect, bool undo)
         {
-            Port? dynamicPort = GetPort(fieldName);
-            if (dynamicPort == null) throw new ArgumentException($"port {fieldName} doesn't exist");
+            if (_allPorts.TryGetValue(fieldName, out var dynamicPort) == false)
+                throw new ArgumentException($"port {fieldName} doesn't exist");
+
             RemovePort(dynamicPort, disconnect, undo);
         }
 
@@ -75,26 +70,14 @@ namespace YNode.Editor
         {
             if (disconnect)
                 port.Disconnect(undo);
-            _ports.Remove(port.FieldName);
-            _portsRecycling[port.FieldName] = port;
+            ActivePorts.Remove(port.FieldName);
             port.MarkRecycled();
-        }
-
-        /// <summary> Returns port which matches fieldName </summary>
-        public Port? GetPort(string fieldName)
-        {
-            return _ports.GetValueOrDefault(fieldName);
-        }
-
-        public bool HasPort(string fieldName)
-        {
-            return _ports.ContainsKey(fieldName);
         }
 
         /// <summary> Disconnect everything from this node </summary>
         public void ClearConnections(bool undo)
         {
-            foreach ((_, Port port) in _ports)
+            foreach ((_, Port port) in ActivePorts)
                 port.Disconnect(undo);
         }
 

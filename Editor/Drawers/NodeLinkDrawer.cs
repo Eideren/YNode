@@ -11,6 +11,8 @@ namespace YNode.Editor
     [DrawerPriority(90, 0, 0)]
     public sealed class NodeLinkDrawer<T> : OdinValueDrawer<T>, IDisposable where T : class // Must use 'class' instead of 'INodeValue' because that test is on the field's value type not the field's type, meaning that nulls do not get decorated by this
     {
+        private Port? _port = null;
+
         protected override bool CanDrawValueProperty(InspectorProperty property)
         {
             return property.Tree.WeakTargets[0] is NodeEditor && typeof(INodeValue).IsAssignableFrom(property.Info.TypeOfValue) && property.GetAttribute<IOAttribute>() is not null;
@@ -20,14 +22,14 @@ namespace YNode.Editor
         {
             base.Initialize();
             var node = (NodeEditor)Property.Tree.WeakTargets[0];
-            if (node.GetPort(Property.UnityPropertyPath) != null)
+            if (node.ActivePorts.ContainsKey(Property.UnityPropertyPath))
                 return;
 
             var valueType = Property.Info.TypeOfValue;
             string tooltip = Property.GetAttribute<TooltipAttribute>()?.tooltip ?? valueType.Name;
             var attrib = Property.Attributes.GetAttribute<IOAttribute>();
             var io = attrib is OutputAttribute ? IO.Output : IO.Input;
-            node.AddPort(Property.UnityPropertyPath, valueType, io, GetConnected, CanConnectTo, SetConnection, attrib.Stroke, tooltip);
+            _port = node.AddPort(Property.UnityPropertyPath, valueType, io, GetConnected, CanConnectTo, SetConnection, attrib.Stroke, tooltip);
             node.Window.Repaint();
 
             void SetConnection(INodeValue? node1) => ValueEntry.WeakSmartValue = node1!;
@@ -40,16 +42,15 @@ namespace YNode.Editor
             if (GraphWindow.InNodeEditor) // We only care about dispose caused by changes in properties, other kinds should be handled by the graph editor
             {
                 var node = (NodeEditor)Property.Tree.WeakTargets[0];
-                var port = node.GetPort(Property.UnityPropertyPath);
-                if (port is not null)
-                    node.RemovePort(port, false, false);
+                node.RemovePort(Property.UnityPropertyPath, false, false);
             }
         }
 
         protected override void DrawPropertyLayout(GUIContent label)
         {
+            Port port = _port!;
             var node = (NodeEditor)Property.Tree.WeakTargets[0];
-            Port port = node.GetPort(Property.UnityPropertyPath)!;
+            node.ActivePorts[Property.UnityPropertyPath] = port;
 
             if (!GraphWindow.InNodeEditor)
             {

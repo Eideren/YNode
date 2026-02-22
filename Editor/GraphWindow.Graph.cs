@@ -351,7 +351,7 @@ namespace YNode.Editor
 
                 foreach (var editor in _nodesToEditor)
                 {
-                    foreach (var port in editor.Value.Ports)
+                    foreach (var port in editor.Value.ActivePorts)
                     {
                         if (port.Value.Connected == nodeEditor.Value)
                             port.Value.Disconnect(undo);
@@ -375,7 +375,7 @@ namespace YNode.Editor
         {
             foreach (var editor in _nodesToEditor)
             {
-                foreach (var port in editor.Value.Ports)
+                foreach (var port in editor.Value.ActivePorts)
                 {
                     if (port.Value.Connected == nodeEditor.Value)
                         port.Value.Connect(newEditor, undo);
