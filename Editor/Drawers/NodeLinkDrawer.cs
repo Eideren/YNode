@@ -48,15 +48,15 @@ namespace YNode.Editor
 
         protected override void DrawPropertyLayout(GUIContent label)
         {
-            Port port = _port!;
-            var node = (NodeEditor)Property.Tree.WeakTargets[0];
-            node.ActivePorts[Property.UnityPropertyPath] = port;
-
             if (!GraphWindow.InNodeEditor)
             {
                 CallNextDrawer(label);
                 return;
             }
+
+            Port port = _port ?? throw new NullReferenceException();
+            var node = (NodeEditor)Property.Tree.WeakTargets[0];
+            node.ActivePorts[Property.UnityPropertyPath] = port;
 
             if (Property.Tree.WeakTargets.Count > 1)
             {
