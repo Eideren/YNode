@@ -14,6 +14,9 @@ namespace YNode.Editor
 
     public class Port
     {
+        public const float Size = 16;
+
+        private INodeValue? _previouslyConnected;
         private CanConnectTo _canConnectTo;
         private GetConnected _getConnected;
         private SetConnection _setConnection;
@@ -24,16 +27,27 @@ namespace YNode.Editor
         public Type ValueType { get; }
         public string Tooltip { get; set; }
         public NoodleStroke Stroke { get; set; }
-        public Rect CachedRect { get; set; }
-        public float CachedHeight { get; set; }
+        public float LocalYOffset { get; set; }
 
-        public INodeValue? Connected => _getConnected();
+        public Rect CachedRect
+        {
+            get
+            {
+                Vector2 portHandlePos = NodeEditor.Value.Position;
+                if (Direction == IO.Output)
+                    portHandlePos.x += NodeEditor.CachedSize.x;
+                portHandlePos.y += LocalYOffset;
+                return new Rect(portHandlePos.x - Size / 2f, portHandlePos.y - Size / 2f, Size, Size);
+            }
+        }
+
+        public INodeValue? Connected => SampleConnected();
 
         public NodeEditor? ConnectedEditor
         {
             get
             {
-                INodeValue? value = _getConnected();
+                INodeValue? value = SampleConnected();
                 if (value != null)
                 {
                     if (NodeEditor.Window.NodesToEditor.TryGetValue(value, out var editor))
@@ -125,6 +139,25 @@ namespace YNode.Editor
             _canConnectTo = null!;
             _getConnected = null!;
             _setConnection = null!;
+        }
+
+        public INodeValue? SampleConnected()
+        {
+            var newConnected = _getConnected();
+            if (ReferenceEquals(newConnected, _previouslyConnected) == false)
+            {
+                if (_previouslyConnected != null && NodeEditor.Window.NodesToEditor.TryGetValue(_previouslyConnected, out var editor))
+                {
+                    editor.LooselyConnectedToThis.Remove(this);
+                }
+
+                if (newConnected != null && NodeEditor.Window.NodesToEditor.TryGetValue(newConnected, out editor))
+                {
+                    editor.LooselyConnectedToThis.Add(this);
+                }
+            }
+
+            return newConnected;
         }
     }
 }

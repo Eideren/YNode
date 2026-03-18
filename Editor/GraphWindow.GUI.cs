@@ -274,9 +274,10 @@ namespace YNode.Editor
                                     alpha = 0;
                             }
 
-                            arrCol[j] = Color.Lerp(gradient.a, gradient.b, (float)i / length + (j + 1f) / division / length);
+                            float unit = j / (float)division;
+                            arrCol[j] = Color.Lerp(gradient.a, gradient.b, (i + unit) / (length - 1f));
                             arrCol[j].a *= alpha;
-                            Vector2 bezierNext = CalculateBezierPoint(pointA, tangentA, tangentB, pointB, j / (float)division);
+                            Vector2 bezierNext = CalculateBezierPoint(pointA, tangentA, tangentB, pointB, unit);
                             arrV2[j] = bezierNext;
                         }
                         arrV2.AsSpan()[(division+1)..].Fill(arrV2[division]); // fill rest of the array with same point
@@ -428,7 +429,7 @@ namespace YNode.Editor
         private static List<Vector2> _gridPointsCache = new();
 
         /// <summary> Draws all connections </summary>
-        public void DrawConnections()
+        protected virtual void DrawConnections()
         {
             Vector2 mousePos = Event.current.mousePosition;
             _hoveredReroute = null;
@@ -691,12 +692,6 @@ namespace YNode.Editor
             else if (_culledEditors.Contains(nodeEditor))
                 return;
 
-            if (e.type == EventType.Repaint)
-            {
-                foreach (var (_, port) in nodeEditor.ActivePorts)
-                    port.CachedRect = default;
-            }
-
             //Get node position
             Vector2 nodePos = GridToWindowPositionWeird(nodeEditor.Value.Position);
             if (sticky)
@@ -774,22 +769,6 @@ namespace YNode.Editor
                     var nodeRect = new Rect(nodePos, nodeEditor.CachedSize);
                     if ((nodeRect.Contains(mousePos) && nodeEditor.HitTest(nodeRect, mousePos)) == false)
                         _hoveredNode = previousHover == _hoveredNode ? null : previousHover;
-                }
-
-                foreach (var (_, port) in nodeEditor.ActivePorts)
-                {
-                    Vector2 portHandlePos;
-                    if (port.Direction == IO.Output)
-                        portHandlePos.x = size.x;
-                    else
-                        portHandlePos.x = 0;
-                    portHandlePos.y = port.CachedHeight;
-                    if (_stickyEditors.Contains(nodeEditor))
-                        portHandlePos += GetStickyGridPosition(nodeEditor);
-                    else
-                        portHandlePos += nodeEditor.Value.Position;
-                    Rect rect = new Rect(portHandlePos.x - 8, portHandlePos.y - 8, 16, 16);
-                    port.CachedRect = rect;
                 }
             }
 

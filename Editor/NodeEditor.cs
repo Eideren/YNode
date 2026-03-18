@@ -34,6 +34,7 @@ namespace YNode.Editor
 
         /// <summary> Iterate over all ports on this node. </summary>
         public Dictionary<string, Port> ActivePorts { get; private set; } = new();
+        public HashSet<Port> LooselyConnectedToThis { get; private set; } = new();
 
         public bool IsSelected() => Selection.Contains(this);
 

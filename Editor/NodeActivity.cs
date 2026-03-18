@@ -208,18 +208,6 @@ namespace YNode.Editor
                                 (Mathf.Round((node.Value.Position.x + 8) / 16) * 16) - 8,
                                 (Mathf.Round((node.Value.Position.y + 8) / 16) * 16) - 8);
                         }
-
-                        // Offset portConnectionPoints instantly if a node is dragged so they aren't delayed by a frame.
-                        Vector2 offset = node.Value.Position - initial;
-                        if (offset.sqrMagnitude > 0)
-                        {
-                            foreach (var (_, port) in node.ActivePorts)
-                            {
-                                Rect rect = port.CachedRect;
-                                rect.position += offset;
-                                port.CachedRect = rect;
-                            }
-                        }
                     }
 
                     // Move selected reroutes with offset

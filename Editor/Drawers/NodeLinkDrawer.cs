@@ -119,7 +119,7 @@ namespace YNode.Editor
 
                 rect = GUILayoutUtility.GetLastRect();
                 GraphWindow.Current.GetPortStyle(port, out _, out _, out var paddingLeft);
-                rect.position = rect.position - new Vector2(16 + paddingLeft, -spacePadding);
+                rect.position = rect.position - new Vector2(Port.Size + paddingLeft, -spacePadding);
                 // If property is an output, display a text label and put a port handle on the right side
             }
             else if (port.Direction == IO.Output)
@@ -164,10 +164,11 @@ namespace YNode.Editor
                 rect.position = rect.position + new Vector2(rect.width, spacePadding);
             }
 
-            rect.size = new(16, 16);
+            rect.size = new(Port.Size, Port.Size);
 
             // Register the handle position
-            port.CachedHeight = rect.center.y;
+            if (Event.current.type == EventType.Repaint)
+                port.LocalYOffset = rect.center.y;
         }
     }
 }
