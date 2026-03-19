@@ -30,8 +30,6 @@ namespace YNode.Editor
         /// <summary> Executed after all other window GUI. Useful if Zoom is ruining your day. Automatically resets after being run.</summary>
         public event Action? OnLateGUI;
 
-        public HashSet<NodeEditor> LossyConnectedEditors = new();
-
         protected virtual void OnGUI()
         {
             if (_ranLoad == false)
@@ -149,18 +147,15 @@ namespace YNode.Editor
             GUI.DrawTextureWithTexCoords(rect, crossTex, new Rect(tileOffset + new Vector2(0.5f, 0.5f), tileAmount));
         }
 
-        /// <summary> Show right-click context menu for hovered reroute </summary>
-        private void ShowRerouteContextMenu(ReroutePoint reroute)
+        /// <summary> Fills in content for the right-click context menu for hovered reroute </summary>
+        protected virtual void RerouteContextMenu(GenericMenu contextMenu, ReroutePoint reroute)
         {
-            GenericMenu contextMenu = new GenericMenu();
             contextMenu.AddItem(new GUIContent("Remove"), false, () => reroute.RemovePoint());
-            contextMenu.DropDown(new Rect(Event.current.mousePosition, Vector2.zero));
         }
 
-        /// <summary> Show right-click context menu for hovered port </summary>
-        private void ShowPortContextMenu(Port hoveredPort)
+        /// <summary> Fills in content for the right-click context menu for hovered port </summary>
+        protected virtual void PortContextMenu(GenericMenu contextMenu, Port hoveredPort)
         {
-            GenericMenu contextMenu = new GenericMenu();
             contextMenu.AddItem(new GUIContent("Clear Connections"), false, () => hoveredPort.Disconnect(true));
             //Get compatible nodes with this port
             if (Preferences.GetSettings().CreateFilter)
@@ -168,8 +163,6 @@ namespace YNode.Editor
                 contextMenu.AddSeparator("");
                 AddContextMenuItems(contextMenu, hoveredPort.CanConnectTo, x => hoveredPort.Connect(x, true));
             }
-
-            contextMenu.DropDown(new Rect(Event.current.mousePosition, Vector2.zero));
         }
 
         private static Vector2 CalculateBezierPoint(Vector2 p0, Vector2 p1, Vector2 p2, Vector2 p3, float t)
@@ -184,7 +177,8 @@ namespace YNode.Editor
         }
 
         /// <summary> Draws a line segment without allocating temporary arrays </summary>
-        private static void DrawAAPolyLineNonAlloc(float thickness, Vector2 p0, Vector2 p1)
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void DrawAAPolyLineNonAlloc(float thickness, Vector2 p0, Vector2 p1)
         {
             s_polyLineTempArray[0].x = p0.x;
             s_polyLineTempArray[0].y = p0.y;
@@ -195,7 +189,7 @@ namespace YNode.Editor
 
         /// <summary> Draws a line segment with shadows without allocating temporary arrays </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static void DrawAAPolyLineWithShadowNonAlloc(float thickness, Vector2 p0, Vector2 p1)
+        public static void DrawAAPolyLineWithShadowNonAlloc(float thickness, Vector2 p0, Vector2 p1)
         {
             s_polyLineTempArray[0].x = p0.x;
             s_polyLineTempArray[0].y = p0.y;
@@ -208,19 +202,24 @@ namespace YNode.Editor
             Handles.DrawAAPolyLine(thickness, s_polyLineTempArray);
         }
 
-        /// <summary> Draw a bezier from output to input in grid coordinates </summary>
-        public void DrawNoodle((Color a, Color b) gradient, NoodlePath path, NoodleStroke stroke, float thickness, List<Vector2> gridPoints)
+        /// <summary> Draws a line segment with shadows without allocating temporary arrays </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void DrawAAPolyLineWithShadowNonAlloc(float thickness, Vector3[] positions, Color[] colors)
         {
-            if (Event.current.type != EventType.Repaint)
-                return;
+            var previousColor = Handles.color;
+            Handles.color = Color.black;
+            Handles.DrawAAPolyLine(thickness*1.5f, colors, positions);
+            Handles.color = previousColor;
+            Handles.DrawAAPolyLine(thickness, colors, positions);
+        }
 
+        public void NoodleBuild(NoodlePath path, List<Vector2> controlPoints, List<Vector3> output)
+        {
             // convert grid points to window points
-            for (int i = 0; i < gridPoints.Count; ++i)
-                gridPoints[i] = GridToWindowPosition(gridPoints[i]);
+            for (int i = 0; i < controlPoints.Count; ++i)
+                controlPoints[i] = GridToWindowPosition(controlPoints[i]);
 
-            Color originalHandlesColor = Handles.color;
-            Handles.color = gradient.a;
-            int length = gridPoints.Count;
+            int length = controlPoints.Count;
             switch (path)
             {
                 case NoodlePath.Curvy:
@@ -228,14 +227,13 @@ namespace YNode.Editor
                     for (int i = 0; i < length - 1; i++)
                     {
                         Vector2 inputTangent;
-                        // Cached most variables that repeat themselves here to avoid so many indexer calls :p
-                        Vector2 pointA = gridPoints[i];
-                        Vector2 pointB = gridPoints[i + 1];
+                        Vector2 pointA = controlPoints[i];
+                        Vector2 pointB = controlPoints[i + 1];
                         float distAb = Vector2.Distance(pointA, pointB);
                         if (i == 0) outputTangent = Zoom * distAb * 0.01f * Vector2.right;
                         if (i < length - 2)
                         {
-                            Vector2 pointC = gridPoints[i + 2];
+                            Vector2 pointC = controlPoints[i + 2];
                             Vector2 ab = (pointB - pointA).normalized;
                             Vector2 cb = (pointB - pointC).normalized;
                             Vector2 ac = (pointC - pointA).normalized;
@@ -258,33 +256,14 @@ namespace YNode.Editor
                         // Hover effect.
                         int division = Mathf.RoundToInt(.2f * distAb) + 3;
 
-                        var arrV2 = ArrayPool<Vector3>.Shared.Rent(division+1);
-                        var arrCol = ArrayPool<Color>.Shared.Rent(division+1);
 
-                        arrV2[0] = pointA;
-                        arrCol.AsSpan().Fill(gradient.a);
-                        for (int j = 1, draw = 0; j <= division; ++j)
+                        output.Add(pointA);
+                        for (int j = 1; j <= division; ++j)
                         {
-                            float alpha = 1;
-                            if (stroke == NoodleStroke.Dashed)
-                            {
-                                draw++;
-                                if (draw >= 2) draw = -2;
-                                if (draw == 0)
-                                    alpha = 0;
-                            }
-
                             float unit = j / (float)division;
-                            arrCol[j] = Color.Lerp(gradient.a, gradient.b, (i + unit) / (length - 1f));
-                            arrCol[j].a *= alpha;
                             Vector2 bezierNext = CalculateBezierPoint(pointA, tangentA, tangentB, pointB, unit);
-                            arrV2[j] = bezierNext;
+                            output.Add(bezierNext);
                         }
-                        arrV2.AsSpan()[(division+1)..].Fill(arrV2[division]); // fill rest of the array with same point
-                        Handles.DrawAAPolyLine(thickness, arrCol, arrV2);
-
-                        ArrayPool<Color>.Shared.Return(arrCol);
-                        ArrayPool<Vector3>.Shared.Return(arrV2);
 
                         outputTangent = -inputTangent;
                     }
@@ -293,28 +272,16 @@ namespace YNode.Editor
                 case NoodlePath.Straight:
                     for (int i = 0; i < length - 1; i++)
                     {
-                        Vector2 pointA = gridPoints[i];
-                        Vector2 pointB = gridPoints[i + 1];
-                        // Draws the line with the coloring.
-                        Vector2 prevPoint = pointA;
+                        Vector2 pointA = controlPoints[i];
+                        Vector2 pointB = controlPoints[i + 1];
                         // Approximately one segment per 5 pixels
                         int segments = (int)Vector2.Distance(pointA, pointB) / 5;
                         segments = Math.Max(segments, 1);
 
-                        int draw = 0;
                         for (int j = 0; j <= segments; j++)
                         {
-                            draw++;
                             float t = j / (float)segments;
-                            Vector2 lerp = Vector2.Lerp(pointA, pointB, t);
-                            if (draw > 0)
-                            {
-                                if (i == length - 2) Handles.color = Color.Lerp(gradient.a, gradient.b, t);
-                                DrawAAPolyLineWithShadowNonAlloc(thickness, prevPoint, lerp);
-                            }
-
-                            prevPoint = lerp;
-                            if (stroke == NoodleStroke.Dashed && draw >= 2) draw = -2;
+                            output.Add(Vector2.Lerp(pointA, pointB, t));
                         }
                     }
 
@@ -322,111 +289,191 @@ namespace YNode.Editor
                 case NoodlePath.Angled:
                     for (int i = 0; i < length - 1; i++)
                     {
-                        if (i == length - 1) continue; // Skip last index
-                        if (gridPoints[i].x <= gridPoints[i + 1].x - (50 / Zoom))
+                        if (controlPoints[i].x <= controlPoints[i + 1].x - (50 / Zoom))
                         {
-                            float midpoint = (gridPoints[i].x + gridPoints[i + 1].x) * 0.5f;
-                            Vector2 start1 = gridPoints[i];
-                            Vector2 end1 = gridPoints[i + 1];
+                            float midpoint = (controlPoints[i].x + controlPoints[i + 1].x) * 0.5f;
+                            Vector2 start1 = controlPoints[i];
+                            Vector2 end1 = controlPoints[i + 1];
                             start1.x = midpoint;
                             end1.x = midpoint;
-                            if (i == length - 2)
-                            {
-                                DrawAAPolyLineWithShadowNonAlloc(thickness, gridPoints[i], start1);
-                                Handles.color = Color.Lerp(gradient.a, gradient.b, 0.5f);
-                                DrawAAPolyLineWithShadowNonAlloc(thickness, start1, end1);
-                                Handles.color = gradient.b;
-                                DrawAAPolyLineWithShadowNonAlloc(thickness, end1, gridPoints[i + 1]);
-                            }
-                            else
-                            {
-                                DrawAAPolyLineWithShadowNonAlloc(thickness, gridPoints[i], start1);
-                                DrawAAPolyLineWithShadowNonAlloc(thickness, start1, end1);
-                                DrawAAPolyLineWithShadowNonAlloc(thickness, end1, gridPoints[i + 1]);
-                            }
+
+                            output.Add(controlPoints[i]);
+                            output.Add(start1);
+                            output.Add(end1);
+                            output.Add(controlPoints[i + 1]);
                         }
                         else
                         {
-                            float midpoint = (gridPoints[i].y + gridPoints[i + 1].y) * 0.5f;
-                            Vector2 start1 = gridPoints[i];
-                            Vector2 end1 = gridPoints[i + 1];
+                            float midpoint = (controlPoints[i].y + controlPoints[i + 1].y) * 0.5f;
+                            Vector2 start1 = controlPoints[i];
+                            Vector2 end1 = controlPoints[i + 1];
                             start1.x += 25 / Zoom;
                             end1.x -= 25 / Zoom;
                             Vector2 start2 = start1;
                             Vector2 end2 = end1;
                             start2.y = midpoint;
                             end2.y = midpoint;
-                            if (i == length - 2)
-                            {
-                                DrawAAPolyLineWithShadowNonAlloc(thickness, gridPoints[i], start1);
-                                Handles.color = Color.Lerp(gradient.a, gradient.b, 0.25f);
-                                DrawAAPolyLineWithShadowNonAlloc(thickness, start1, start2);
-                                Handles.color = Color.Lerp(gradient.a, gradient.b, 0.5f);
-                                DrawAAPolyLineWithShadowNonAlloc(thickness, start2, end2);
-                                Handles.color = Color.Lerp(gradient.a, gradient.b, 0.75f);
-                                DrawAAPolyLineWithShadowNonAlloc(thickness, end2, end1);
-                                Handles.color = gradient.b;
-                                DrawAAPolyLineWithShadowNonAlloc(thickness, end1, gridPoints[i + 1]);
-                            }
-                            else
-                            {
-                                DrawAAPolyLineWithShadowNonAlloc(thickness, gridPoints[i], start1);
-                                DrawAAPolyLineWithShadowNonAlloc(thickness, start1, start2);
-                                DrawAAPolyLineWithShadowNonAlloc(thickness, start2, end2);
-                                DrawAAPolyLineWithShadowNonAlloc(thickness, end2, end1);
-                                DrawAAPolyLineWithShadowNonAlloc(thickness, end1, gridPoints[i + 1]);
-                            }
+
+                            output.Add(controlPoints[i]);
+                            output.Add(start1);
+                            output.Add(start2);
+                            output.Add(end2);
+                            output.Add(end1);
+                            output.Add(controlPoints[i + 1]);
                         }
                     }
 
                     break;
                 case NoodlePath.ShaderLab:
-                    Vector2 start = gridPoints[0];
-                    Vector2 end = gridPoints[length - 1];
+                    Vector2 start = controlPoints[0];
+                    Vector2 end = controlPoints[length - 1];
                     //Modify first and last point in array so we can loop trough them nicely.
-                    gridPoints[0] = gridPoints[0] + Vector2.right * (20 / Zoom);
-                    gridPoints[length - 1] = gridPoints[length - 1] + Vector2.left * (20 / Zoom);
+                    controlPoints[0] = controlPoints[0] + Vector2.right * (20 / Zoom);
+                    controlPoints[length - 1] = controlPoints[length - 1] + Vector2.left * (20 / Zoom);
                     //Draw first vertical lines going out from nodes
-                    Handles.color = gradient.a;
-                    DrawAAPolyLineWithShadowNonAlloc(thickness, start, gridPoints[0]);
-                    Handles.color = gradient.b;
-                    DrawAAPolyLineWithShadowNonAlloc(thickness, end, gridPoints[length - 1]);
+
+                    output.Add(start);
+                    output.Add(controlPoints[0]);
                     for (int i = 0; i < length - 1; i++)
                     {
-                        Vector2 pointA = gridPoints[i];
-                        Vector2 pointB = gridPoints[i + 1];
-                        // Draws the line with the coloring.
-                        Vector2 prevPoint = pointA;
+                        Vector2 pointA = controlPoints[i];
+                        Vector2 pointB = controlPoints[i + 1];
                         // Approximately one segment per 5 pixels
                         int segments = (int)Vector2.Distance(pointA, pointB) / 5;
                         segments = Math.Max(segments, 1);
 
-                        int draw = 0;
                         for (int j = 0; j <= segments; j++)
                         {
-                            draw++;
                             float t = j / (float)segments;
                             Vector2 lerp = Vector2.Lerp(pointA, pointB, t);
-                            if (draw > 0)
-                            {
-                                if (i == length - 2) Handles.color = Color.Lerp(gradient.a, gradient.b, t);
-                                DrawAAPolyLineWithShadowNonAlloc(thickness, prevPoint, lerp);
-                            }
-
-                            prevPoint = lerp;
-                            if (stroke == NoodleStroke.Dashed && draw >= 2) draw = -2;
+                            output.Add(lerp);
                         }
                     }
 
-                    gridPoints[0] = start;
-                    gridPoints[length - 1] = end;
+                    output.Add(controlPoints[length - 1]);
+                    output.Add(end);
+
+                    controlPoints[0] = start;
+                    controlPoints[length - 1] = end;
                     break;
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(path), path, null);
+            }
+        }
+
+        public float NoodleProximity(List<Vector3> noodle, Vector3 point)
+        {
+            float closestDist = float.PositiveInfinity;
+            for (int i = 0; i < noodle.Count - 1; i++)
+            {
+                var a = noodle[i];
+                var b = noodle[i + 1];
+
+                var d = ProjectPointLine(point, a, b);
+                closestDist = MathF.Min(closestDist, (point - d).sqrMagnitude);
             }
 
-            Handles.color = originalHandlesColor;
+            return MathF.Sqrt(closestDist);
+
+            static Vector3 ProjectPointLine(Vector3 point, Vector3 lineStart, Vector3 lineEnd)
+            {
+                Vector3 relativePoint = point - lineStart;
+                Vector3 lineDirection = lineEnd - lineStart;
+                float length = lineDirection.magnitude;
+                Vector3 normalizedLineDirection = lineDirection;
+                if (length > .000001f)
+                    normalizedLineDirection /= length;
+
+                float dot = Vector3.Dot(normalizedLineDirection, relativePoint);
+                dot = Mathf.Clamp(dot, 0.0F, length);
+
+                return lineStart + normalizedLineDirection * dot;
+            }
+        }
+
+        public void NoodleDraw((Color a, Color b) gradient, List<Vector3> workingArray, NoodleStroke stroke, float thickness)
+        {
+            if (Event.current.type != EventType.Repaint)
+                return;
+
+            var rVector3 = ArrayPool<Vector3>.Shared.Rent(workingArray.Count);
+            var rColor = ArrayPool<Color>.Shared.Rent(workingArray.Count);
+            workingArray.CopyTo(rVector3);
+            rColor.AsSpan()[workingArray.Count..].Fill(gradient.b);
+            rVector3.AsSpan()[workingArray.Count..].Fill(workingArray[^1]);
+
+            for (int i = 0; i < rColor.Length && i < workingArray.Count; i++)
+                rColor[i] = Color.Lerp(gradient.a, gradient.b, i / (workingArray.Count - 1f));
+
+            if (stroke == NoodleStroke.Dashed)
+            {
+                for (int i = 6; i < rColor.Length && i < workingArray.Count; i += 6)
+                {
+                    rColor[i-2].a = 0f;
+                    rColor[i-1].a = 0f;
+                    rColor[i].a = 0f;
+                }
+            }
+
+            DrawAAPolyLineWithShadowNonAlloc(thickness, rVector3, rColor);
+
+            ArrayPool<Color>.Shared.Return(rColor);
+            ArrayPool<Vector3>.Shared.Return(rVector3);
+        }
+
+        private static readonly List<Vector3> _noodlePosCache = new();
+
+        /// <summary> Draw a bezier from output to input in grid coordinates </summary>
+        public void DrawNoodle((Color a, Color b) gradient, NoodlePath path, NoodleStroke stroke, float thickness, List<Vector2> gridPoints)
+        {
+            if (Event.current.type != EventType.Repaint)
+                return;
+
+            _noodlePosCache.Clear();
+            NoodleBuild(path, gridPoints, _noodlePosCache);
+            NoodleDraw(gradient, _noodlePosCache, stroke, thickness);
         }
 
         private static List<Vector2> _gridPointsCache = new();
+
+        public bool GetPathFor(Port port, List<Vector2> workingList, out Rect boxWindowSpace, out float noodleThickness, out Vector2 endPosition)
+        {
+            if (port.ConnectedEditor is null)
+            {
+                boxWindowSpace = new();
+                noodleThickness = 0f;
+                endPosition = default;
+                return false;
+            }
+
+            noodleThickness = GetNoodleThickness(port, port.ConnectedEditor);
+            Rect fromRect = port.CachedRect;
+            endPosition = GetNodeEndpointPosition(fromRect.center, port.ConnectedEditor, port.Direction);
+            var toRect = new Rect(endPosition, default);
+            if (port.Direction == IO.Input)
+                (fromRect, toRect) = (toRect, fromRect);
+
+            workingList.Add(fromRect.center);
+            if (port.TryGetReroutePoints(out var reroutePoints))
+                workingList.AddRange(reroutePoints);
+            workingList.Add(toRect.center);
+
+            Vector2 min = toRect.center;
+            Vector2 max = toRect.center;
+            foreach (var point in workingList)
+            {
+                min = Vector2.Min(min, point);
+                max = Vector2.Max(max, point);
+            }
+            boxWindowSpace = default;
+            boxWindowSpace.min = min;
+            boxWindowSpace.max = max;
+
+            boxWindowSpace = GridToWindowRect(boxWindowSpace);
+            boxWindowSpace.min -= new Vector2(noodleThickness, noodleThickness);
+            boxWindowSpace.max += new Vector2(noodleThickness, noodleThickness);
+            return true;
+        }
 
         /// <summary> Draws all connections </summary>
         protected virtual void DrawConnections()
@@ -454,75 +501,53 @@ namespace YNode.Editor
                     Color portColor = GetPortColor(port);
                     GetPortStyle(port, out var portActive, out var portNormal, out _);
 
-                    var portRect = fromRect;
                     Color backgroundColor = GetPortBackgroundColor(port);
 
-                    var portRectInWindowSpace = GridToWindowRect(portRect);
+                    var portRectInWindowSpace = GridToWindowRect(fromRect);
 
                     if (portRectInWindowSpace.Contains(mousePos))
                         _hoveredPort = port;
 
-                    if (port.ConnectedEditor is {} target)
+                    _gridPointsCache.Clear();
+                    if (port.ConnectedEditor is {} target
+                        && GetPathFor(port, _gridPointsCache, out Rect boxWindowSpace, out float noodleThickness, out var endPosition)
+                        && ShouldWindowRectBeCulled(boxWindowSpace) == false)
                     {
-                        var endPosition = GetNodeEndpointPosition(fromRect.center, target, port.Direction);
-                        var toRect = new Rect(endPosition, default);
-                        if (port.Direction == IO.Input)
-                            (fromRect, toRect) = (toRect, fromRect);
+                        var reroutes = _gridPointsCache.Count - 2;
+                        var strokeType = port.Stroke;
+                        var pathType = GetNoodlePath(port, target);
+                        var colorGradient = GetNoodleGradient(port, target);
+                        var arrowRect = DrawArrow(port.Direction, endPosition, port.Direction == IO.Input ? colorGradient.a : colorGradient.b);
+                        if (arrowRect.Contains(mousePos))
+                            _hoveredPort = port;
 
-                        port.TryGetReroutePoints(out var reroutePoints);
+                        _noodlePosCache.Clear();
+                        NoodleBuild(pathType, _gridPointsCache, _noodlePosCache);
 
-                        _gridPointsCache.Clear();
-                        _gridPointsCache.Add(fromRect.center);
-                        if (reroutePoints != null)
-                            _gridPointsCache.AddRange(reroutePoints);
-                        _gridPointsCache.Add(toRect.center);
+                        if (boxWindowSpace.Contains(mousePos) && NoodleProximity(_noodlePosCache, mousePos) < noodleThickness * 2)
+                            _hoveredPort = port;
 
-                        Vector2 min = toRect.center;
-                        Vector2 max = toRect.center;
-                        foreach (var point in _gridPointsCache)
+                        NoodleDraw(colorGradient, _noodlePosCache, strokeType, noodleThickness);
+
+                        // Loop through reroute points again and draw the points
+                        for (int i = 0; i < reroutes; i++)
                         {
-                            min = Vector2.Min(min, point);
-                            max = Vector2.Max(max, point);
-                        }
-                        Rect boundingBox = default;
-                        boundingBox.min = min;
-                        boundingBox.max = max;
+                            ReroutePoint rerouteRef = new ReroutePoint(port, i);
+                            // Draw reroute point at position
+                            Rect rect = rerouteRef.GetRect();
+                            rect = GridToWindowRect(rect);
 
-                        if (ShouldGridRectBeCulled(boundingBox) == false)
-                        {
-                            NoodleStroke noodleStroke = port.Stroke;
-                            float noodleThickness = GetNoodleThickness(port, target);
-                            NoodlePath noodlePath = GetNoodlePath(port, target);
-                            var noodleGradient = GetNoodleGradient(port, target);
-
-                            var arrowRect = DrawArrow(port.Direction, endPosition, port.Direction == IO.Input ? noodleGradient.a : noodleGradient.b);
-                            if (arrowRect.Contains(mousePos))
-                                _hoveredPort = port;
-                            DrawNoodle(noodleGradient, noodlePath, noodleStroke, noodleThickness, _gridPointsCache);
-
-                            if (reroutePoints != null)
+                            // Draw selected reroute points with an outline
+                            if (SelectedReroutes.Contains(rerouteRef))
                             {
-                                // Loop through reroute points again and draw the points
-                                for (int i = 0; i < reroutePoints.Count; i++)
-                                {
-                                    ReroutePoint rerouteRef = new ReroutePoint(port, i);
-                                    // Draw reroute point at position
-                                    Rect rect = rerouteRef.GetRect();
-                                    rect = GridToWindowRect(rect);
-
-                                    // Draw selected reroute points with an outline
-                                    if (SelectedReroutes.Contains(rerouteRef))
-                                    {
-                                        GUI.color = Preferences.GetSettings().HighlightColor;
-                                        GUI.DrawTexture(rect, portNormal);
-                                    }
-
-                                    GUI.color = portColor;
-                                    GUI.DrawTexture(rect, portActive);
-                                    if (rect.Contains(mousePos))
-                                        _hoveredReroute = rerouteRef;
-                                }
+                                GUI.color = Preferences.GetSettings().HighlightColor;
+                                GUI.DrawTexture(rect, portNormal);
                             }
+
+                            GUI.color = portColor;
+                            GUI.DrawTexture(rect, portActive);
+                            if (rect.Contains(mousePos))
+                                _hoveredReroute = rerouteRef;
                         }
                     }
 

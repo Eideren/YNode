@@ -99,6 +99,7 @@ namespace YNode.Editor
         /// </summary>
         /// <param name="menu"></param>
         /// <param name="canConnectTo">Use it to filter only nodes compatible with this port</param>
+        /// <param name="onNewNode"></param>
         public virtual void AddContextMenuItems(GenericMenu menu, CanConnectTo? canConnectTo, Action<NodeEditor>? onNewNode)
         {
             Vector2 pos = WindowToGridPosition(Event.current.mousePosition);
@@ -227,6 +228,9 @@ namespace YNode.Editor
         /// and <seealso cref="GUIStyle.active"/> [Background] = dot texture;
         /// </summary>
         /// <param name="port">the owner of the style</param>
+        /// <param name="activeBackground"></param>
+        /// <param name="normalBackground"></param>
+        /// <param name="padding"></param>
         /// <returns></returns>
         public virtual void GetPortStyle(Port port, out Texture2D activeBackground, out Texture2D normalBackground, out float padding)
         {
@@ -345,8 +349,7 @@ namespace YNode.Editor
 
                 if (undo)
                 {
-                    Undo.RecordObject(nodeEditor, "Delete Node");
-                    Undo.RecordObject(Graph, "Delete Node");
+                    Undo.RecordObjects(new UnityEngine.Object[]{ nodeEditor, Graph }, "Delete Node");
                 }
 
                 foreach (var editor in _nodesToEditor)

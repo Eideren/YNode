@@ -78,6 +78,15 @@ namespace YNode.Editor
                         PanOffset += (1 - oldZoom / Zoom) * (WindowToGridPosition(e.mousePosition) + PanOffset);
                     break;
 
+                case EventType.KeyDown when CurrentActivity is null && e.keyCode == KeyCode.Space && EditorGUIUtility.editingTextField == false:
+                    {
+                        var menu = new GenericMenu();
+                        AddContextMenuItems(menu, null, null);
+                        menu.DropDown(new Rect(Event.current.mousePosition, Vector2.zero));
+                        e.Use();
+                    }
+                    break;
+
                 case EventType.MouseDrag when CurrentActivity is null && e.button is 0:
                     if (_hoveredNode is not null || _hoveredReroute is not null)
                         CurrentActivity = new DragNodeActivity(this, e.mousePosition);
@@ -167,12 +176,16 @@ namespace YNode.Editor
                 case EventType.MouseUp when e.button is 1 or 2 && CurrentActivity is null:
                     if (_hoveredReroute is {} hoveredRerouteValue2)
                     {
-                        ShowRerouteContextMenu(hoveredRerouteValue2);
+                        var contextMenu = new GenericMenu();
+                        RerouteContextMenu(contextMenu, hoveredRerouteValue2);
+                        contextMenu.DropDown(new Rect(Event.current.mousePosition, Vector2.zero));
                         e.Use();
                     }
                     else if (_hoveredPort != null)
                     {
-                        ShowPortContextMenu(_hoveredPort);
+                        var contextMenu = new GenericMenu();
+                        PortContextMenu(contextMenu, _hoveredPort);
+                        contextMenu.DropDown(new Rect(Event.current.mousePosition, Vector2.zero));
                         e.Use();
                     }
                     else if (_hoveredNode != null && IsHoveringTitle(_hoveredNode))

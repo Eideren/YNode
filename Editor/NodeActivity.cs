@@ -198,9 +198,8 @@ namespace YNode.Editor
                     // Move selected nodes with offset
                     for (int i = 0; i < Editors.Length; i++)
                     {
-                        NodeEditor node = Editors[i];
-                        Undo.RecordObject(node, "Moved Node");
-                        Vector2 initial = node.Value.Position;
+                        var node = Editors[i];
+                        Undo.RecordObjects(new Object[]{ node, node.Graph }, "Moved Node");
                         node.Value.Position = mousePos + DragOffset[i];
                         if (gridSnap)
                         {

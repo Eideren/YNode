@@ -9,13 +9,14 @@ namespace YNode.Editor
 {
     // Must be above one of the polymorphic drawer having special handling for fields pointing to the same target
     [DrawerPriority(90, 0, 0)]
-    public sealed class NodeLinkDrawer<T> : OdinValueDrawer<T>, IDisposable where T : class // Must use 'class' instead of 'INodeValue' because that test is on the field's value type not the field's type, meaning that nulls do not get decorated by this
+    public sealed class NodeLinkDrawer<T> : OdinAttributeDrawer<T>, IDisposable where T : IOAttribute
     {
         private Port? _port = null;
+        private INodeValue? _delayedAssign = null;
 
-        protected override bool CanDrawValueProperty(InspectorProperty property)
+        protected override bool CanDrawAttributeProperty(InspectorProperty property)
         {
-            return property.Tree.WeakTargets[0] is NodeEditor && typeof(INodeValue).IsAssignableFrom(property.Info.TypeOfValue) && property.GetAttribute<IOAttribute>() is not null;
+            return property.Tree.WeakTargets[0] is NodeEditor && typeof(INodeValue).IsAssignableFrom(property.Info.TypeOfValue);
         }
 
         protected override void Initialize()
@@ -32,8 +33,25 @@ namespace YNode.Editor
             _port = node.AddPort(Property.UnityPropertyPath, valueType, io, GetConnected, CanConnectTo, SetConnection, attrib.Stroke, tooltip);
             node.Window.Repaint();
 
-            void SetConnection(INodeValue? node1) => ValueEntry.WeakSmartValue = node1!;
-            INodeValue? GetConnected() => (INodeValue?)ValueEntry.WeakSmartValue;
+            void SetConnection(INodeValue? newConnection)
+            {
+                Property.BaseValueEntry.WeakSmartValue = newConnection!;
+                if (Property.BaseValueEntry.WeakSmartValue != newConnection)
+                    _delayedAssign = newConnection!; // Odin for some reason doesn't swap out the value right away for polymorphic fields
+            }
+
+            INodeValue? GetConnected()
+            {
+                var val = Property.BaseValueEntry.WeakSmartValue;
+                if (_delayedAssign != null)
+                {
+                    if (val != _delayedAssign)
+                        return _delayedAssign;
+                    _delayedAssign = null;
+                }
+                return (INodeValue?)val;
+            }
+
             bool CanConnectTo(Type type) => valueType.IsAssignableFrom(type);
         }
 
@@ -77,7 +95,7 @@ namespace YNode.Editor
         /// <summary> Make a field for a serialized property. Manual node port override. </summary>
         private void PropertyField(GUIContent? label, Port port)
         {
-            if (Property.Info.GetAttribute<RequiredAttribute>() is not null && ValueEntry.SmartValue == null)
+            if (Property.Info.GetAttribute<RequiredAttribute>() is not null && Property.BaseValueEntry.WeakSmartValue == null)
                 SirenixEditorGUI.ErrorMessageBox($"{Property.NiceName} is required");
 
             Rect rect = new();

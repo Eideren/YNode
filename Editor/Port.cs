@@ -101,9 +101,14 @@ namespace YNode.Editor
             }
 
             if (undo)
-                Undo.RecordObjects(new[] { NodeEditor, newConnection }, "Connect Port");
+                Undo.RecordObjects(new UnityEngine.Object[] { NodeEditor, NodeEditor.Graph, newConnection }, "Connect Port");
 
             _setConnection(newConnection.Value);
+            if (_previouslyConnected != null && NodeEditor.Window.NodesToEditor.TryGetValue(_previouslyConnected, out var editor))
+            {
+                editor.LooselyConnectedToThis.Remove(this);
+                _previouslyConnected = null;
+            }
         }
 
         public bool CanConnectTo(Type type) => _canConnectTo(type);
@@ -112,8 +117,14 @@ namespace YNode.Editor
         public void Disconnect(bool undo)
         {
             if (undo)
-                Undo.RecordObject(NodeEditor, "Disconnect Port");
+                Undo.RecordObjects(new UnityEngine.Object[] { NodeEditor, NodeEditor.Graph }, "Disconnect Port");
+
             _setConnection(null);
+            if (_previouslyConnected != null && NodeEditor.Window.NodesToEditor.TryGetValue(_previouslyConnected, out var editor))
+            {
+                editor.LooselyConnectedToThis.Remove(this);
+                _previouslyConnected = null;
+            }
         }
 
         /// <summary> Get reroute points for a given connection. This is used for organization </summary>
