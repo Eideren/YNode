@@ -123,11 +123,7 @@ namespace YNode.Editor
                 Undo.RecordObject(NodeEditor.Graph, "Disconnect Port");
 
             _setConnection(null);
-            if (_previouslyConnected != null && NodeEditor.Window.NodesToEditor.TryGetValue(_previouslyConnected, out var editor))
-            {
-                editor.LooselyConnectedToThis.Remove(this);
-                _previouslyConnected = null;
-            }
+            SampleConnected();
         }
 
         /// <summary> Get reroute points for a given connection. This is used for organization </summary>
@@ -153,6 +149,11 @@ namespace YNode.Editor
             _canConnectTo = null!;
             _getConnected = null!;
             _setConnection = null!;
+            if (_previouslyConnected != null && NodeEditor.Window.NodesToEditor.TryGetValue(_previouslyConnected, out var editor))
+            {
+                editor.LooselyConnectedToThis.Remove(this);
+                _previouslyConnected = null;
+            }
         }
 
         public INodeValue? SampleConnected()
@@ -169,6 +170,8 @@ namespace YNode.Editor
                 {
                     editor.LooselyConnectedToThis.Add(this);
                 }
+
+                _previouslyConnected = newConnected;
             }
 
             return newConnected;

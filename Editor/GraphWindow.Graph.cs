@@ -5,7 +5,6 @@ using Sirenix.OdinInspector.Editor;
 using UnityEditor;
 using UnityEngine;
 using GenericMenu = YNode.Editor.AdvancedGenericMenu;
-using Object = UnityEngine.Object;
 
 namespace YNode.Editor
 {
@@ -37,7 +36,21 @@ namespace YNode.Editor
             }
 
             foreach (INodeValue nodeValue in Graph.Nodes)
-                InitNodeEditorFor(nodeValue);
+                InitNodeEditorFor(nodeValue, false);
+
+            // Doing it afterward, that way ports init can use _nodesToEditor
+            foreach (var (_, editor) in _nodesToEditor)
+            {
+                try
+                {
+                    editor.ObjectTree.BeginDraw(true);
+                    editor.ObjectTree.DrawProperties();
+                }
+                finally
+                {
+                    editor.ObjectTree.EndDraw();
+                }
+            }
         }
 
         protected virtual void OnEnable()
@@ -105,7 +118,21 @@ namespace YNode.Editor
 
                 Event.current.Use(); // InitNode requires the event to be swallowed properly, as it calls Odin inspector
                 foreach (INodeValue nodeValue in Graph.Nodes)
-                    InitNodeEditorFor(nodeValue);
+                    InitNodeEditorFor(nodeValue, false);
+
+                // See Load()
+                foreach (var (_, editor) in _nodesToEditor)
+                {
+                    try
+                    {
+                        editor.ObjectTree.BeginDraw(true);
+                        editor.ObjectTree.DrawProperties();
+                    }
+                    finally
+                    {
+                        editor.ObjectTree.EndDraw();
+                    }
+                }
                 #endif
             }
             catch (Exception e)
@@ -337,7 +364,7 @@ namespace YNode.Editor
                 var node = Graph.AddNode(type);
                 EditorUtility.SetDirty(Graph);
 
-                editor = InitNodeEditorFor(node);
+                editor = InitNodeEditorFor(node, true);
 
                 if (undo)
                     Undo.RegisterCreatedObjectUndo(editor, "Create Node");
@@ -348,7 +375,7 @@ namespace YNode.Editor
             return editor;
         }
 
-        public NodeEditor InitNodeEditorFor(INodeValue node)
+        public NodeEditor InitNodeEditorFor(INodeValue node, bool runInitialDraw)
         {
             if (_nodesToEditor.TryGetValue(node, out var nodeEditor))
                 return nodeEditor;
@@ -361,14 +388,17 @@ namespace YNode.Editor
             editor.SerializedObject = new SerializedObject(editor);
             editor.ObjectTree = PropertyTree.Create(editor.SerializedObject);
 
-            try
+            if (runInitialDraw)
             {
-                editor.ObjectTree.BeginDraw(true);
-                editor.ObjectTree.DrawProperties();
-            }
-            finally
-            {
-                editor.ObjectTree.EndDraw();
+                try
+                {
+                    editor.ObjectTree.BeginDraw(true);
+                    editor.ObjectTree.DrawProperties();
+                }
+                finally
+                {
+                    editor.ObjectTree.EndDraw();
+                }
             }
 
             _nodesToEditor.Add(node, editor);
@@ -385,7 +415,7 @@ namespace YNode.Editor
                     Undo.RecordObject(Graph, "Duplicate Node");
                 var node = Graph.CopyNode(original);
                 EditorUtility.SetDirty(Graph);
-                editor = InitNodeEditorFor(node);
+                editor = InitNodeEditorFor(node, true);
 
                 if (undo)
                     Undo.RegisterCreatedObjectUndo(editor, "Duplicate Node");
