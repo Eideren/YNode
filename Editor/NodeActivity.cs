@@ -73,7 +73,7 @@ namespace YNode.Editor
                     // If connection is valid, save it
                     if (_draggedOutputTarget != null && Port.CanConnectTo(_draggedOutputTarget.Value.GetType()))
                     {
-                        Port.Connect(_draggedOutputTarget, true);
+                        Port.TryConnectTo(_draggedOutputTarget, true);
                     }
                     // Open context menu for auto-connection if there is no target node
                     else if (_draggedOutputTarget == null)
@@ -81,8 +81,8 @@ namespace YNode.Editor
                         Port.ClearReroute();
                         if (Preferences.GetSettings().DragToCreate)
                         {
-                            GenericMenu menu = new GenericMenu();
-                            Window.AddContextMenuItems(menu, Port.CanConnectTo, x => Port.Connect(x, true));
+                            var menu = new GenericMenu();
+                            Window.AddContextMenuItems(menu, Port.CanConnectTo, x => Port.TryConnectTo(x, true));
                             menu.DropDown(new Rect(Event.current.mousePosition, Vector2.zero));
                         }
                     }
@@ -199,7 +199,7 @@ namespace YNode.Editor
                     for (int i = 0; i < Editors.Length; i++)
                     {
                         var node = Editors[i];
-                        Undo.RecordObjects(new Object[]{ node, node.Graph }, "Moved Node");
+                        Undo.RecordObject(node.Graph, "Moved Node");
                         node.Value.Position = mousePos + DragOffset[i];
                         if (gridSnap)
                         {

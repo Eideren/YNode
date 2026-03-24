@@ -9,10 +9,10 @@ namespace YNode.Editor
 {
     // Must be above one of the polymorphic drawer having special handling for fields pointing to the same target
     [DrawerPriority(90, 0, 0)]
-    public sealed class NodeLinkDrawer<T> : OdinAttributeDrawer<T>, IDisposable where T : IOAttribute
+    public sealed class NodePortDrawer<T> : OdinAttributeDrawer<T>, IDisposable where T : IOAttribute
     {
         private Port? _port = null;
-        private INodeValue? _delayedAssign = null;
+        private SerializedProperty? _prop;
 
         protected override bool CanDrawAttributeProperty(InspectorProperty property)
         {
@@ -23,8 +23,18 @@ namespace YNode.Editor
         {
             base.Initialize();
             var node = (NodeEditor)Property.Tree.WeakTargets[0];
-            if (node.ActivePorts.ContainsKey(Property.UnityPropertyPath))
+            _prop = node.SerializedObject.FindProperty(Property.UnityPropertyPath);
+            if (_prop is null)
+            {
+                Debug.LogWarning($"Could not find {Property.UnityPropertyPath} in {node}");
                 return;
+            }
+
+            if (node.ActivePorts.ContainsKey(Property.UnityPropertyPath))
+            {
+                Debug.LogWarning("Multiple drawer for the same port ?");
+                return;
+            }
 
             var valueType = Property.Info.TypeOfValue;
             string tooltip = Property.GetAttribute<TooltipAttribute>()?.tooltip ?? valueType.Name;
@@ -35,21 +45,17 @@ namespace YNode.Editor
 
             void SetConnection(INodeValue? newConnection)
             {
-                Property.BaseValueEntry.WeakSmartValue = newConnection!;
-                if (Property.BaseValueEntry.WeakSmartValue != newConnection)
-                    _delayedAssign = newConnection!; // Odin for some reason doesn't swap out the value right away for polymorphic fields
+                // We're going through unity's serialization stuff instead of Odin's
+                // As odin is latent when it comes to assigning polymorphic fields to a type of value that's different from the existing one
+
+                _prop.managedReferenceValue = newConnection;
+                node.SerializedObject.ApplyModifiedProperties();
             }
 
             INodeValue? GetConnected()
             {
-                var val = Property.BaseValueEntry.WeakSmartValue;
-                if (_delayedAssign != null)
-                {
-                    if (val != _delayedAssign)
-                        return _delayedAssign;
-                    _delayedAssign = null;
-                }
-                return (INodeValue?)val;
+                node.SerializedObject.UpdateIfRequiredOrScript();
+                return (INodeValue?)_prop.managedReferenceValue;
             }
 
             bool CanConnectTo(Type type) => valueType.IsAssignableFrom(type);
@@ -69,6 +75,11 @@ namespace YNode.Editor
             if (!GraphWindow.InNodeEditor)
             {
                 CallNextDrawer(label);
+                return;
+            }
+
+            if (_prop is null)
+            {
                 return;
             }
 

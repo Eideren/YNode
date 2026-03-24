@@ -72,6 +72,7 @@ namespace YNode.Editor
                 _getConnected = getConnected;
                 _canConnectTo = canConnectTo;
                 _setConnection = setConnection;
+                SampleConnected(); // Updates LooselyConnectedToThis
                 return true;
             }
 
@@ -89,35 +90,37 @@ namespace YNode.Editor
             _setConnection = setConnection;
             Stroke = stroke;
             Tooltip = tooltip ?? ValueType.Name;
-        }
-
-        /// <summary> Connect this <see cref="Port" /> to another </summary>
-        public void Connect(NodeEditor newConnection, bool undo)
-        {
-            if (Connected == newConnection.Value)
-            {
-                Debug.LogWarning("Port already connected. ");
-                return;
-            }
-
-            if (undo)
-                Undo.RecordObjects(new UnityEngine.Object[] { NodeEditor, NodeEditor.Graph, newConnection }, "Connect Port");
-
-            _setConnection(newConnection.Value);
-            if (_previouslyConnected != null && NodeEditor.Window.NodesToEditor.TryGetValue(_previouslyConnected, out var editor))
-            {
-                editor.LooselyConnectedToThis.Remove(this);
-                _previouslyConnected = null;
-            }
+            SampleConnected(); // Updates LooselyConnectedToThis
         }
 
         public bool CanConnectTo(Type type) => _canConnectTo(type);
+
+        public bool TryConnectTo(NodeEditor newConnection, bool undo) => TryConnectTo(newConnection.Value, undo);
+
+        public bool TryConnectTo(INodeValue expectedValue, bool undo)
+        {
+            if (Connected == expectedValue)
+            {
+                Debug.LogWarning("Port already connected. ");
+                return false;
+            }
+
+            if (CanConnectTo(expectedValue.GetType()) == false)
+                return false;
+
+            if (undo)
+                Undo.RegisterCompleteObjectUndo(NodeEditor.Graph, "Connect Port");
+
+            _setConnection(expectedValue);
+            var currentValue = SampleConnected();
+            return ReferenceEquals(currentValue, expectedValue);
+        }
 
         /// <summary> Disconnect this port from another port </summary>
         public void Disconnect(bool undo)
         {
             if (undo)
-                Undo.RecordObjects(new UnityEngine.Object[] { NodeEditor, NodeEditor.Graph }, "Disconnect Port");
+                Undo.RecordObject(NodeEditor.Graph, "Disconnect Port");
 
             _setConnection(null);
             if (_previouslyConnected != null && NodeEditor.Window.NodesToEditor.TryGetValue(_previouslyConnected, out var editor))

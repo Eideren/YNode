@@ -53,6 +53,7 @@ namespace YNode.Editor
             }
 
             _allPorts.Add(fieldName, port);
+            ActivePorts.Add(fieldName, port);
             return port;
         }
 
@@ -171,15 +172,18 @@ namespace YNode.Editor
             // Actions if only one node is selected
             if (Selection.objects.Length == 1 && Selection.activeObject is NodeEditor node)
             {
-                menu.AddItem(new GUIContent("Move To Top"), false, () => Window.MoveNodeToTop(node));
+                menu.AddItem("Move To Top", () => Window.MoveNodeToTop(node), (Texture2D)EditorGUIUtility.IconContent("CollabPush").image);
+                menu.AddItem("Move To Bottom", () => Window.MoveNodeToBottom(node), (Texture2D)EditorGUIUtility.IconContent("CollabPull").image);
 
                 canRemove = Window.CanRemove(node);
             }
 
             // Add actions to any number of selected nodes
-            menu.AddItem(new GUIContent("Copy"), false, Window.CopySelectedNodes);
-            menu.AddItem(new GUIContent("Duplicate"), false, Window.DuplicateSelectedNodes);
-            menu.AddItem(new GUIContent("Remove"), false, canRemove ? Window.RemoveSelectedNodes : null!);
+            menu.AddItem("Copy", Window.CopySelectedNodes);
+            menu.AddItem("Duplicate", Window.DuplicateSelectedNodes);
+            menu.AddItem("Remove", canRemove ? Window.RemoveSelectedNodes : null!, (Texture2D)EditorGUIUtility.IconContent("d_winbtn_mac_close_a").image);
+            menu.AddItem("Dissolve", canRemove ? Window.DissolveSelectedNodes : null!, (Texture2D)EditorGUIUtility.IconContent("d_winbtn_mac_min_a").image);
+            menu.AddItem("Extract", canRemove ? Window.ExtractSelectedNodes : null!, (Texture2D)EditorGUIUtility.IconContent("d_Unlinked").image);
 
             // Custom sctions if only one node is selected
             if (Selection.objects.Length == 1 && Selection.activeObject is NodeEditor node2)

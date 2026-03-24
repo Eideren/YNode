@@ -241,7 +241,7 @@ namespace YNode.Editor
                     {
                         if (e.type == EventType.ExecuteCommand)
                         {
-                            RemoveSelectedNodes();
+                            DissolveSelectedNodes();
                             GUI.changed = true;
                         }
 
@@ -309,18 +309,65 @@ namespace YNode.Editor
         /// <summary> Remove nodes in the graph in Selection.objects</summary>
         public void RemoveSelectedNodes()
         {
-            // We need to delete reroutes starting at the highest point index to avoid shifting indices
-            SelectedReroutes = SelectedReroutes.OrderByDescending(x => x.PointIndex).ToList();
-            for (int i = 0; i < SelectedReroutes.Count; i++)
+            using (new UndoGroup(nameof(RemoveSelectedNodes)))
             {
-                SelectedReroutes[i].RemovePoint();
-            }
+                // We need to delete reroutes starting at the highest point index to avoid shifting indices
+                SelectedReroutes = SelectedReroutes.OrderByDescending(x => x.PointIndex).ToList();
+                for (int i = 0; i < SelectedReroutes.Count; i++)
+                {
+                    SelectedReroutes[i].RemovePoint();
+                }
 
-            SelectedReroutes.Clear();
-            foreach (var item in Selection.objects.ToArray())
+                SelectedReroutes.Clear();
+                foreach (var item in Selection.objects.ToArray())
+                {
+                    if (item is NodeEditor node)
+                        RemoveNode(node, true);
+                }
+            }
+        }
+
+        public void ExtractSelectedNodes()
+        {
+            using (new UndoGroup(nameof(ExtractSelectedNodes)))
             {
-                if (item is NodeEditor node)
-                    RemoveNode(node, true);
+                var selection = Selection.objects.ToArray();
+                foreach (var item in selection)
+                {
+                    if (item is not NodeEditor node)
+                        continue;
+
+                    // All inputs connected to this node will connect to outputs of this node
+                    var inputs = node.LooselyConnectedToThis.ToList();
+                    foreach (var (_, outputPort) in node.ActivePorts.ToArray())
+                    {
+                        var portTarget = outputPort.Connected;
+                        outputPort.Disconnect(true);
+                        if (portTarget == null)
+                            continue;
+
+                        for (int i = inputs.Count - 1; i >= 0; i--)
+                        {
+                            var connected = inputs[i];
+                            if (connected.TryConnectTo(portTarget, true))
+                                inputs.RemoveAt(i);
+                        }
+                    }
+
+                    foreach (var input in inputs)
+                    {
+                        input.Disconnect(true);
+                    }
+                }
+            }
+        }
+
+        public void DissolveSelectedNodes()
+        {
+            using (new UndoGroup(nameof(DissolveSelectedNodes)))
+            {
+                ExtractSelectedNodes();
+                RemoveSelectedNodes();
             }
         }
 
@@ -331,6 +378,15 @@ namespace YNode.Editor
             var index = Graph.Nodes.IndexOf(val);
             Graph.Nodes.RemoveAt(index);
             Graph.Nodes.Add(val);
+        }
+
+        /// <summary> Draw this node on top of other nodes by placing it last in the graph.nodes list </summary>
+        public void MoveNodeToBottom(NodeEditor nodeEditor)
+        {
+            var val = nodeEditor.Value;
+            var index = Graph.Nodes.IndexOf(val);
+            Graph.Nodes.RemoveAt(index);
+            Graph.Nodes.Insert(0, val);
         }
 
         /// <summary> Duplicate selected nodes and select the duplicates </summary>

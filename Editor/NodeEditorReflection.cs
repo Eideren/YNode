@@ -108,16 +108,15 @@ namespace YNode.Editor
                     }
                 }
 
-                for (int i = 0; i < items.Length; i++)
+                foreach (var kvp in items)
                 {
-                    KeyValuePair<ContextMenu, MethodInfo> kvp = items[i];
                     if (invalidatedEntries.Contains(kvp.Key.menuItem))
                     {
-                        contextMenu.AddDisabledItem(new GUIContent(kvp.Key.menuItem));
+                        contextMenu.AddDisabledItem(kvp.Key.menuItem);
                     }
                     else
                     {
-                        contextMenu.AddItem(new GUIContent(kvp.Key.menuItem), false, () => kvp.Value.Invoke(obj, null));
+                        contextMenu.AddItem(kvp.Key.menuItem, () => kvp.Value.Invoke(obj, null));
                     }
                 }
             }

@@ -150,18 +150,35 @@ namespace YNode.Editor
         /// <summary> Fills in content for the right-click context menu for hovered reroute </summary>
         protected virtual void RerouteContextMenu(GenericMenu contextMenu, ReroutePoint reroute)
         {
-            contextMenu.AddItem(new GUIContent("Remove"), false, () => reroute.RemovePoint());
+            contextMenu.AddItem("Remove", () => reroute.RemovePoint());
         }
 
         /// <summary> Fills in content for the right-click context menu for hovered port </summary>
         protected virtual void PortContextMenu(GenericMenu contextMenu, Port hoveredPort)
         {
-            contextMenu.AddItem(new GUIContent("Clear Connections"), false, () => hoveredPort.Disconnect(true));
+            contextMenu.AddItem("Clear Connections", () => hoveredPort.Disconnect(true));
             //Get compatible nodes with this port
             if (Preferences.GetSettings().CreateFilter)
             {
                 contextMenu.AddSeparator("");
-                AddContextMenuItems(contextMenu, hoveredPort.CanConnectTo, x => hoveredPort.Connect(x, true));
+
+                AddContextMenuItems(contextMenu, hoveredPort.CanConnectTo, OnNewNode);
+
+                void OnNewNode(NodeEditor newEditor)
+                {
+                    if (hoveredPort.ConnectedEditor is { } previouslyConnectedEditor)
+                    {
+                        foreach (var (_, port) in newEditor.ActivePorts)
+                        {
+                            if (port.TryConnectTo(previouslyConnectedEditor.Value, true))
+                            {
+                                break;
+                            }
+                        }
+                    }
+
+                    hoveredPort.TryConnectTo(newEditor, true);
+                }
             }
         }
 

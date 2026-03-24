@@ -5,6 +5,7 @@ using Sirenix.OdinInspector.Editor;
 using UnityEditor;
 using UnityEngine;
 using GenericMenu = YNode.Editor.AdvancedGenericMenu;
+using Object = UnityEngine.Object;
 
 namespace YNode.Editor
 {
@@ -12,11 +13,10 @@ namespace YNode.Editor
     public partial class GraphWindow
     {
         public static NodeEditor? InNodeEditor;
+        public static GraphWindow Current { get; private set; } = null!;
 
         private Dictionary<INodeValue, NodeEditor> _nodesToEditor = new();
         private HashSet<NodeEditor> _currentlyBeingRemoved = new();
-
-        public static GraphWindow Current { get; private set; } = null!;
 
         public IReadOnlyDictionary<INodeValue, NodeEditor> NodesToEditor => _nodesToEditor;
 
@@ -40,7 +40,10 @@ namespace YNode.Editor
                 InitNodeEditorFor(nodeValue);
         }
 
-        protected virtual void OnEnable() { }
+        protected virtual void OnEnable()
+        {
+            Undo.undoRedoEvent += OnUndoRedo;
+        }
 
         protected virtual void OnDisable()
         {
@@ -50,6 +53,64 @@ namespace YNode.Editor
                 editor.Value.SerializedObject.Dispose();
                 editor.Value.ObjectTree.Dispose();
                 DestroyImmediate(editor.Value);
+            }
+
+            Undo.undoRedoEvent -= OnUndoRedo;
+        }
+
+        private void OnUndoRedo(in UndoRedoInfo undo)
+        {
+            try
+            {
+                // Almost works, some issues with redos
+                #if FALSE
+                Current = this;
+                Event.current.Use(); // InitNode requires the event to be swallowed properly, as it calls Odin inspector
+
+                var latestNodes = Graph.Nodes.ToHashSet();
+
+                foreach (var graphNode in latestNodes) // Create editor for nodes that have been re-introduced
+                {
+                    if (_nodesToEditor.TryGetValue(graphNode, out var editor))
+                    {
+                        editor.Value = graphNode;
+                    }
+                    else
+                    {
+                        InitNodeEditorFor(graphNode);
+                    }
+                }
+
+                foreach (var (val, editor) in _nodesToEditor.ToArray()) // Remove editors that are not part of the graph anymore
+                {
+                    if (latestNodes.Contains(val) == false)
+                    {
+                        editor.SerializedObject.Dispose();
+                        editor.ObjectTree.Dispose();
+                        DestroyImmediate(editor);
+                        _nodesToEditor.Remove(editor.Value);
+                    }
+                }
+
+                #else
+                Current = this;
+                foreach (var (_, editor) in _nodesToEditor)
+                {
+                    editor.SerializedObject.Dispose();
+                    editor.ObjectTree.Dispose();
+                    DestroyImmediate(editor);
+                }
+
+                _nodesToEditor.Clear();
+
+                Event.current.Use(); // InitNode requires the event to be swallowed properly, as it calls Odin inspector
+                foreach (INodeValue nodeValue in Graph.Nodes)
+                    InitNodeEditorFor(nodeValue);
+                #endif
+            }
+            catch (Exception e)
+            {
+                Debug.LogException(e);
             }
         }
 
@@ -149,21 +210,21 @@ namespace YNode.Editor
 
                 // Add node entry to context menu
                 if (disallowed)
-                    menu.AddItem(new GUIContent(path), false, null!);
+                    menu.AddDisabledItem(path);
                 else
-                    menu.AddItem(new GUIContent(path, icon, type.FullName), false, () =>
+                    menu.AddItem(path, () =>
                     {
                         var node = CreateNode(type, pos, true);
                         onNewNode?.Invoke(node);
-                    });
+                    }, (Texture2D?)icon);
             }
 
             menu.AddSeparator();
             if (CopyBuffer.Length > 0)
-                menu.AddItem(new GUIContent("Paste"), false, () => PasteNodes(pos));
+                menu.AddItem("Paste", () => PasteNodes(pos));
             else
-                menu.AddDisabledItem(new GUIContent("Paste"));
-            menu.AddItem(new GUIContent("Preferences"), false, NodeEditorReflection.OpenPreferences);
+                menu.AddDisabledItem("Paste");
+            menu.AddItem("Preferences", NodeEditorReflection.OpenPreferences, (Texture2D)EditorGUIUtility.IconContent("d__Popup").image);
             menu.AddCustomContextMenuItems(Graph);
         }
 
@@ -268,16 +329,21 @@ namespace YNode.Editor
         /// <summary> Create a node and save it in the graph asset </summary>
         public virtual NodeEditor CreateNode(Type type, Vector2 position, bool undo)
         {
-            if (undo)
-                Undo.RecordObject(Graph, "Create Node");
-            var node = Graph.AddNode(type);
-            EditorUtility.SetDirty(Graph);
+            NodeEditor editor;
+            using (new UndoGroup(nameof(CreateNode)))
+            {
+                if (undo)
+                    Undo.RecordObject(Graph, "Create Node");
+                var node = Graph.AddNode(type);
+                EditorUtility.SetDirty(Graph);
 
-            var editor = InitNodeEditorFor(node);
+                editor = InitNodeEditorFor(node);
 
-            if (undo)
-                Undo.RegisterCreatedObjectUndo(editor, "Create Node");
-            node.Position = position;
+                if (undo)
+                    Undo.RegisterCreatedObjectUndo(editor, "Create Node");
+                node.Position = position;
+            }
+
             Repaint();
             return editor;
         }
@@ -290,10 +356,21 @@ namespace YNode.Editor
             var t = Utilities.GetCustomEditor(node.GetType(), typeof(ICustomNodeEditor<>), typeof(NodeEditor));
             var editor = (NodeEditor)CreateInstance(t);
             editor.hideFlags = HideFlags.DontSaveInBuild | HideFlags.DontSaveInEditor;
+            editor.Window = this;
             editor.Value = node;
             editor.SerializedObject = new SerializedObject(editor);
             editor.ObjectTree = PropertyTree.Create(editor.SerializedObject);
-            editor.Window = this;
+
+            try
+            {
+                editor.ObjectTree.BeginDraw(true);
+                editor.ObjectTree.DrawProperties();
+            }
+            finally
+            {
+                editor.ObjectTree.EndDraw();
+            }
+
             _nodesToEditor.Add(node, editor);
             return editor;
         }
@@ -301,14 +378,19 @@ namespace YNode.Editor
         /// <summary> Creates a copy of the original node in the graph </summary>
         public virtual NodeEditor CopyNode(INodeValue original, bool undo)
         {
-            if (undo)
-                Undo.RecordObject(Graph, "Duplicate Node");
-            var node = Graph.CopyNode(original);
-            EditorUtility.SetDirty(Graph);
-            var editor = InitNodeEditorFor(node);
+            NodeEditor editor;
+            using (new UndoGroup(nameof(CopyNode)))
+            {
+                if (undo)
+                    Undo.RecordObject(Graph, "Duplicate Node");
+                var node = Graph.CopyNode(original);
+                EditorUtility.SetDirty(Graph);
+                editor = InitNodeEditorFor(node);
 
-            if (undo)
-                Undo.RegisterCreatedObjectUndo(editor, "Duplicate Node");
+                if (undo)
+                    Undo.RegisterCreatedObjectUndo(editor, "Duplicate Node");
+            }
+
             Repaint();
             return editor;
         }
@@ -347,42 +429,31 @@ namespace YNode.Editor
             {
                 nodeEditor.PreRemoval();
 
-                if (undo)
+                using (new UndoGroup(nameof(RemoveNode)))
                 {
-                    Undo.RecordObjects(new UnityEngine.Object[]{ nodeEditor, Graph }, "Delete Node");
-                }
-
-                foreach (var editor in _nodesToEditor)
-                {
-                    foreach (var port in editor.Value.ActivePorts)
+                    if (undo)
                     {
-                        if (port.Value.Connected == nodeEditor.Value)
-                            port.Value.Disconnect(undo);
+                        Undo.RecordObject(Graph, "Delete Node");
                     }
-                }
 
-                Graph.RemoveNode(nodeEditor.Value);
-                EditorUtility.SetDirty(Graph);
-                _nodesToEditor.Remove(nodeEditor.Value);
-                nodeEditor.ObjectTree.Dispose();
-                if (undo)
-                    Undo.DestroyObjectImmediate(nodeEditor);
+                    foreach (var editor in _nodesToEditor)
+                    {
+                        foreach (var port in editor.Value.ActivePorts)
+                        {
+                            if (port.Value.Connected == nodeEditor.Value)
+                                port.Value.Disconnect(undo);
+                        }
+                    }
+
+                    Graph.RemoveNode(nodeEditor.Value);
+                    EditorUtility.SetDirty(Graph);
+                    _nodesToEditor.Remove(nodeEditor.Value);
+                    nodeEditor.ObjectTree.Dispose();
+                }
             }
             finally
             {
                 _currentlyBeingRemoved.Remove(nodeEditor);
-            }
-        }
-
-        public void ReplaceConnection(NodeEditor nodeEditor, NodeEditor newEditor, bool undo)
-        {
-            foreach (var editor in _nodesToEditor)
-            {
-                foreach (var port in editor.Value.ActivePorts)
-                {
-                    if (port.Value.Connected == nodeEditor.Value)
-                        port.Value.Connect(newEditor, undo);
-                }
             }
         }
     }

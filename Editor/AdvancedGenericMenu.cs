@@ -1,4 +1,5 @@
 ﻿#if UNITY_2019_1_OR_NEWER
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
@@ -14,131 +15,27 @@ namespace YNode.Editor
         public static float? DefaultMinWidth = 200f;
         public static float? DefaultMaxWidth = 300f;
 
-        private class AdvancedGenericMenuItem : AdvancedDropdownItem
+        private readonly string _name;
+        private readonly List<AdvancedGenericMenuItem?> _items = new();
+
+
+        public AdvancedGenericMenu(string name = "", AdvancedDropdownState? state = null) : base(state ?? new AdvancedDropdownState())
         {
-            private MenuFunction? _func;
-
-            private MenuFunction2? _func2;
-            private object? _userData;
-
-            public void Set(bool enabled, Texture2D? icon = null, MenuFunction? func = null,
-                MenuFunction2? func2 = null, object? userData = null)
-            {
-                this.enabled = enabled;
-                this.icon = icon;
-                this._func = func;
-                this._func2 = func2;
-                this._userData = userData;
-            }
-
-            public void Run()
-            {
-                if (_func2 != null)
-                    _func2(_userData);
-                else if (_func != null)
-                    _func();
-            }
-
-            public AdvancedGenericMenuItem(string name) : base(name)
-            {
-            }
+            _name = name;
         }
 
-        private List<AdvancedGenericMenuItem?> _items = new();
-
-        private AdvancedGenericMenuItem FindOrCreateItem(string name, AdvancedGenericMenuItem? currentRoot = null)
-        {
-            AdvancedGenericMenuItem? item;
-
-            string[] paths = name.Split('/');
-            if (currentRoot == null)
-            {
-                item = _items.FirstOrDefault(x => x != null && x.name == paths[0]);
-                if (item == null)
-                    _items.Add(item = new AdvancedGenericMenuItem(paths[0]));
-            }
-            else
-            {
-                item = currentRoot.children.OfType<AdvancedGenericMenuItem>().FirstOrDefault(x => x.name == paths[0]);
-                if (item == null)
-                    currentRoot.AddChild(item = new AdvancedGenericMenuItem(paths[0]));
-            }
-
-            if (paths.Length > 1)
-                return FindOrCreateItem(string.Join("/", paths, 1, paths.Length - 1), item);
-
-            return item;
-        }
-
-        private AdvancedGenericMenuItem FindParent(string name)
-        {
-            string[] paths = name.Split('/');
-            return FindOrCreateItem(string.Join("/", paths, 0, paths.Length - 1));
-        }
-
-        private string Name { get; set; }
-
-        public AdvancedGenericMenu() : base(new AdvancedDropdownState())
-        {
-            Name = "";
-        }
-
-        public AdvancedGenericMenu(string name, AdvancedDropdownState state) : base(state)
-        {
-            Name = name;
-        }
-
-        //
-        // Summary:
-        //     Add a disabled item to the menu.
-        //
-        // Parameters:
-        //   content:
-        //     The GUIContent to display as a disabled menu item.
-        public void AddDisabledItem(GUIContent content)
+        public void AddDisabledItem(string text, Texture2D? image = null)
         {
             //var parent = FindParent( content.text );
-            var item = FindOrCreateItem(content.text);
-            item.Set(false, null, null);
+            var item = FindOrCreateItem(text);
+            item.Set(false, image);
         }
 
-        //
-        // Summary:
-        //     Add a disabled item to the menu.
-        //
-        // Parameters:
-        //   content:
-        //     The GUIContent to display as a disabled menu item.
-        //
-        //   on:
-        //     Specifies whether to show that the item is currently activated (i.e. a tick next
-        //     to the item in the menu).
-        public void AddDisabledItem(GUIContent content, bool on)
-        {
-        }
-
-        public void AddItem(string name, bool on, MenuFunction func)
-        {
-            AddItem(new GUIContent(name), on, func);
-        }
-
-        public void AddItem(GUIContent content, bool on, MenuFunction func)
+        public void AddItem(string text, MenuFunction func, Texture2D? image = null)
         {
             //var parent = FindParent( content.text );
-            var item = FindOrCreateItem(content.text);
-            item.Set(true /*on*/, content.image as Texture2D, func);
-        }
-
-        public void AddItem(string name, bool on, MenuFunction2 func, object userData)
-        {
-            AddItem(new GUIContent(name), on, func, userData);
-        }
-
-        public void AddItem(GUIContent content, bool on, MenuFunction2 func, object userData)
-        {
-            //var parent = FindParent( content.text );
-            var item = FindOrCreateItem(content.text);
-            item.Set(true /*on*/, content.image as Texture2D, null, func, userData);
+            var item = FindOrCreateItem(text);
+            item.Set(true, image, func);
         }
 
         //
@@ -182,7 +79,7 @@ namespace YNode.Editor
 
         protected override AdvancedDropdownItem BuildRoot()
         {
-            var root = new AdvancedDropdownItem(Name);
+            var root = new AdvancedDropdownItem(_name);
 
             foreach (var m in _items)
             {
@@ -218,7 +115,68 @@ namespace YNode.Editor
         protected override void ItemSelected(AdvancedDropdownItem item)
         {
             if (item is AdvancedGenericMenuItem gmItem)
-                gmItem.Run();
+            {
+                try
+                {
+                    Event.current.Use(); // We right-clicked an option, make sure the event is consumed
+                    gmItem.Run();
+                }
+                catch (Exception e) // We have to introduce this here, otherwise the error does not get surfaced within Unity
+                {
+                    Debug.LogException(e);
+                }
+            }
+        }
+
+        private AdvancedGenericMenuItem FindOrCreateItem(string name, AdvancedGenericMenuItem? currentRoot = null)
+        {
+            AdvancedGenericMenuItem? item;
+
+            string[] paths = name.Split('/');
+            if (currentRoot == null)
+            {
+                item = _items.FirstOrDefault(x => x != null && x.name == paths[0]);
+                if (item == null)
+                    _items.Add(item = new AdvancedGenericMenuItem(paths[0]));
+            }
+            else
+            {
+                item = currentRoot.children.OfType<AdvancedGenericMenuItem>().FirstOrDefault(x => x.name == paths[0]);
+                if (item == null)
+                    currentRoot.AddChild(item = new AdvancedGenericMenuItem(paths[0]));
+            }
+
+            if (paths.Length > 1)
+                return FindOrCreateItem(string.Join("/", paths, 1, paths.Length - 1), item);
+
+            return item;
+        }
+
+        private AdvancedGenericMenuItem FindParent(string name)
+        {
+            string[] paths = name.Split('/');
+            return FindOrCreateItem(string.Join("/", paths, 0, paths.Length - 1));
+        }
+
+        private class AdvancedGenericMenuItem : AdvancedDropdownItem
+        {
+            private MenuFunction? _func;
+
+            public void Set(bool enabled, Texture2D? icon = null, MenuFunction? func2 = null)
+            {
+                this.enabled = enabled;
+                this.icon = icon;
+                _func = func2;
+            }
+
+            public void Run()
+            {
+                _func?.Invoke();
+            }
+
+            public AdvancedGenericMenuItem(string name) : base(name)
+            {
+            }
         }
     }
 }
