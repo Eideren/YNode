@@ -244,6 +244,24 @@ namespace YNode.Editor
                 case EventType.MouseUp when e.button == 0:
                     Window.CurrentActivity = null;
                     e.Use();
+
+                    if (Editors.Length > 0 && Window.HoveredPort is {} hoveredPort)
+                    {
+                        var editor = Editors[0];
+                        if (hoveredPort.ConnectedEditor is { } previouslyConnectedEditor)
+                        {
+                            foreach (var (_, port) in editor.ActivePorts)
+                            {
+                                if (port.TryConnectTo(previouslyConnectedEditor.Value, true))
+                                {
+                                    break;
+                                }
+                            }
+                        }
+
+                        hoveredPort.TryConnectTo(editor, true);
+                    }
+
                     break;
             }
         }
