@@ -1,4 +1,5 @@
 ﻿
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -113,6 +114,8 @@ namespace YNode.Editor
                             var name = member.Attribute("name")?.Value;
                             var summary = member.Element("summary")?.Value?.Trim();
 
+                            summary ??= FindInheritDoc(member, doc);
+
                             if (!string.IsNullOrEmpty(name)
                                 && !string.IsNullOrEmpty(summary)
                                 && Regex.Match(name, """(F|P)\:(?<typename>([^."]*\.)*)(?<membername>[^\"]+)""") is {} m && m.Success)
@@ -132,6 +135,32 @@ namespace YNode.Editor
                 finally
                 {
                     s_done = true;
+                }
+
+                static string? FindInheritDoc(XElement member, XDocument xmlDoc)
+                {
+                    var inherit = member.Element("inheritdoc");
+                    if (inherit == null)
+                        return null;
+
+                    string? cref = (string?)inherit.Attribute("cref");
+                    if (string.IsNullOrWhiteSpace(cref))
+                    {
+                        // sometimes cref is in "cref" attribute or inside <inheritdoc> text; check inner text
+                        cref = inherit.Value?.Trim();
+                        if (string.IsNullOrWhiteSpace(cref))
+                            return null;
+                    }
+
+                    var members = xmlDoc.Root?.Element("members");
+                    if (members == null)
+                        return null;
+
+                    var referenced = members.Element("member") != null
+                        ? members.Elements("member").FirstOrDefault(m => string.Equals((string)m.Attribute("name"), cref, StringComparison.Ordinal))
+                        : null;
+
+                    return referenced?.Element("summary")?.Value?.Trim();
                 }
             }
         }
