@@ -22,6 +22,9 @@ namespace YNode.Editor
         protected override void Initialize()
         {
             base.Initialize();
+            if (GraphWindow.InNodeEditor == false)
+                return;
+
             var node = (NodeEditor)Property.Tree.WeakTargets[0];
             _prop = node.SerializedObject.FindProperty(Property.UnityPropertyPath);
             if (_prop is null)
