@@ -20,7 +20,6 @@ namespace YNode.Editor
 
         private HashSet<NodeEditor> _culledEditors = new();
         private HashSet<NodeEditor> _stickyEditors = new();
-        private bool _firstRun = true;
         [NonSerialized] private string? _title, _titleModified;
 
         /// <summary> 19 if docked, 21 if not </summary>
@@ -33,10 +32,7 @@ namespace YNode.Editor
         protected virtual void OnGUI()
         {
             if (_ranLoad == false)
-            {
-                _firstRun = true;
                 Load();
-            }
 
             Current = this;
             if (Graph == null)
@@ -80,8 +76,6 @@ namespace YNode.Editor
             }
 
             GUI.matrix = m;
-            if (Event.current.type == EventType.Repaint)
-                _firstRun = false;
         }
 
         private void AutoSave()
@@ -669,7 +663,7 @@ namespace YNode.Editor
                     if (_stickyEditors.Contains(editor))
                         continue;
 
-                    DrawNodeEditor(e, editor, false, guiColor, mousePos);
+                    DrawNodeEditor(e.type, editor, false, guiColor, mousePos);
                 }
 
                 ArrayPool<NodeEditor>.Shared.Return(arr);
@@ -682,7 +676,7 @@ namespace YNode.Editor
                     GUI.color = prevColor;
 
                     foreach (var editor in _stickyEditors)
-                        DrawNodeEditor(e, editor, true, guiColor, mousePos);
+                        DrawNodeEditor(e.type, editor, true, guiColor, mousePos);
                 }
 
                 if (oldHovered != _hoveredNode)
@@ -718,11 +712,11 @@ namespace YNode.Editor
             return GetStickyWindowPosition(nodeEditor) - (position.size * (0.5f * Zoom) + PanOffset);
         }
 
-        private void DrawNodeEditor(Event e, NodeEditor nodeEditor, bool sticky,
+        private void DrawNodeEditor(EventType eType, NodeEditor nodeEditor, bool sticky,
             Color guiColor, Vector2 mousePos)
         {
             // Culling
-            if (e.type == EventType.Layout)
+            if (eType == EventType.Layout)
             {
                 // Cull unselected nodes outside view
                 if (!Selection.Contains(nodeEditor) && sticky == false && ShouldBeCulled(nodeEditor))
@@ -802,7 +796,7 @@ namespace YNode.Editor
             GUILayout.EndVertical();
 
             //Cache data about the node for next frame
-            if (e.type == EventType.Repaint)
+            if (eType == EventType.Repaint)
             {
                 Vector2 size = GUILayoutUtility.GetLastRect().size;
                 nodeEditor.CachedSize = size;
@@ -819,36 +813,27 @@ namespace YNode.Editor
 
         public bool ShouldBeCulled(NodeEditor nodeEditor)
         {
-            if (_firstRun)
+            if (nodeEditor.CachedSize == default)
                 return false;
 
             Vector2 nodePos = GridToWindowPositionWeird(nodeEditor.Value.Position);
             if (nodePos.x / _zoom > position.width) return true; // Right
             else if (nodePos.y / _zoom > position.height) return true; // Bottom
-            else if (nodeEditor.CachedSize != default)
+            else
             {
                 Vector2 size = nodeEditor.CachedSize;
                 Vector2 max = nodePos + size;
-                if (max.x < 0 || max.y < 0)
-                    return true;
+                return max.x < 0 || max.y < 0;
             }
-
-            return false;
         }
 
         public bool ShouldGridRectBeCulled(Rect rect)
         {
-            if (_firstRun)
-                return false;
-
             return ShouldWindowRectBeCulled(GridToWindowRect(rect));
         }
 
         public bool ShouldWindowRectBeCulled(Rect rect)
         {
-            if (_firstRun)
-                return false;
-
             var screenRect = new Rect(default, position.size);
             return rect.Overlaps(screenRect) == false;
         }

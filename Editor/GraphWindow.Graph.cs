@@ -40,17 +40,7 @@ namespace YNode.Editor
 
             // Doing it afterward, that way ports init can use _nodesToEditor
             foreach (var (_, editor) in _nodesToEditor)
-            {
-                try
-                {
-                    editor.ObjectTree.BeginDraw(true);
-                    editor.ObjectTree.DrawProperties();
-                }
-                finally
-                {
-                    editor.ObjectTree.EndDraw();
-                }
-            }
+                DrawNodeEditor(EventType.Layout, editor, false, new Color(), new Vector2());
         }
 
         protected virtual void OnEnable()
@@ -389,17 +379,7 @@ namespace YNode.Editor
             editor.ObjectTree = PropertyTree.Create(editor.SerializedObject);
 
             if (runInitialDraw)
-            {
-                try
-                {
-                    editor.ObjectTree.BeginDraw(true);
-                    editor.ObjectTree.DrawProperties();
-                }
-                finally
-                {
-                    editor.ObjectTree.EndDraw();
-                }
-            }
+                DrawNodeEditor(EventType.Layout, editor, false, new Color(), new Vector2());
 
             _nodesToEditor.Add(node, editor);
             return editor;
