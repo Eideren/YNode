@@ -413,28 +413,30 @@ namespace YNode.Editor
 
         private void InsertDuplicateNodes(NodeEditor[] nodes, Vector2 topLeft)
         {
-            if (nodes.Length == 0) return;
+            if (nodes.Length == 0)
+                return;
 
             // Get top-left node
-            Vector2 topLeftNode = nodes.Select(x => x.Value.Position)
+            Vector2 topLeftNode = nodes
+                .Select(x => x.Value.Position)
                 .Aggregate((x, y) => new Vector2(Mathf.Min(x.x, y.x), Mathf.Min(x.y, y.y)));
             Vector2 offset = topLeft - topLeftNode;
 
-            UnityEngine.Object[] newNodes = new UnityEngine.Object[nodes.Length];
+            var newNodes = new UnityEngine.Object[nodes.Length];
             for (int i = 0; i < nodes.Length; i++)
             {
-                NodeEditor srcNodeEditor = nodes[i];
-                if (srcNodeEditor == null) continue;
+                var srcNodeEditor = nodes[i];
 
                 // Check if user is allowed to add more of given node type
                 Type nodeType = srcNodeEditor.GetType();
                 if (Utilities.GetAttrib<DisallowMultipleNodesAttribute>(nodeType, out var disallowAttrib))
                 {
                     int typeCount = Graph.Nodes.Count(x => x.GetType() == nodeType);
-                    if (typeCount >= disallowAttrib.max) continue;
+                    if (typeCount >= disallowAttrib.max)
+                        continue;
                 }
 
-                NodeEditor newNodeEditor = CopyNode(srcNodeEditor.Value, true);
+                var newNodeEditor = CopyNode(srcNodeEditor.Value, true);
                 newNodeEditor.Value.Position = srcNodeEditor.Value.Position + offset;
                 newNodes[i] = newNodeEditor;
             }

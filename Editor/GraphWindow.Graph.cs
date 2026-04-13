@@ -378,7 +378,7 @@ namespace YNode.Editor
             editor.SerializedObject = new SerializedObject(editor);
             editor.ObjectTree = PropertyTree.Create(editor.SerializedObject);
 
-            if (runInitialDraw)
+            if (runInitialDraw && Event.current.type != EventType.ExecuteCommand) // Can't process groups in execute command for some reason
                 DrawNodeEditor(EventType.Layout, editor, false, new Color(), new Vector2());
 
             _nodesToEditor.Add(node, editor);

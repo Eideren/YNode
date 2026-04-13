@@ -31,51 +31,61 @@ namespace YNode.Editor
 
         protected virtual void OnGUI()
         {
-            if (_ranLoad == false)
-                Load();
-
-            Current = this;
-            if (Graph == null)
-                return;
-
-            _title ??= Graph.name;
-            _titleModified ??= $"{_title}*";
-            titleContent.text = EditorUtility.IsDirty(Graph) ? _titleModified : _title;
-
             Matrix4x4 m = GUI.matrix;
-
-            EditorGUI.BeginChangeCheck();
-
-            ControlsPreDraw();
-            DrawGrid(position, Zoom, PanOffset);
-            DrawConnections();
-            CurrentActivity?.PreNodeDraw();
-            DrawNodes();
-            CurrentActivity?.PostNodeDraw();
-            DrawNodeMap();
-            DrawTooltip();
-            OnGUIOverlay();
-            ControlsPostDraw();
-
-            // Run and reset onLateGUI
-            if (OnLateGUI != null)
+            try
             {
-                OnLateGUI();
-                OnLateGUI = null;
-            }
+                if (_ranLoad == false)
+                    Load();
 
-            if (EditorGUI.EndChangeCheck())
-            {
-                EditorUtility.SetDirty(Graph);
-                if (Preferences.GetSettings().AutoSave)
+                Current = this;
+                if (Graph == null)
+                    return;
+
+                _title ??= Graph.name;
+                _titleModified ??= $"{_title}*";
+                titleContent.text = EditorUtility.IsDirty(Graph) ? _titleModified : _title;
+
+
+                EditorGUI.BeginChangeCheck();
+
+                ControlsPreDraw();
+                DrawGrid(position, Zoom, PanOffset);
+                DrawConnections();
+                CurrentActivity?.PreNodeDraw();
+                DrawNodes();
+                CurrentActivity?.PostNodeDraw();
+                DrawNodeMap();
+                DrawTooltip();
+                OnGUIOverlay();
+                ControlsPostDraw();
+
+                // Run and reset onLateGUI
+                if (OnLateGUI != null)
                 {
-                    if (_lastChange == null)
-                        EditorApplication.update += AutoSave;
-                    _lastChange = DateTime.Now;
+                    OnLateGUI();
+                    OnLateGUI = null;
+                }
+
+                if (EditorGUI.EndChangeCheck())
+                {
+                    EditorUtility.SetDirty(Graph);
+                    if (Preferences.GetSettings().AutoSave)
+                    {
+                        if (_lastChange == null)
+                            EditorApplication.update += AutoSave;
+                        _lastChange = DateTime.Now;
+                    }
                 }
             }
-
-            GUI.matrix = m;
+            catch (Exception e)
+            {
+                Debug.LogException(e);
+                throw;
+            }
+            finally
+            {
+                GUI.matrix = m;
+            }
         }
 
         private void AutoSave()
