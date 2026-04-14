@@ -103,7 +103,15 @@ namespace YNode.Editor
 
         protected abstract bool StickyEditorEnabled { get; }
 
-        protected virtual void OnGUIOverlay() { }
+        protected virtual void OnGUIOverlay()
+        {
+            if (_hasTypesToUpgrade &&
+                GUILayout.Button(EditorGUIUtility.TrTextContentWithIcon("This graph's nodes should be upgraded\nclick me to do so", MessageType.Warning), EditorStyles.helpBox))
+            {
+                _hasTypesToUpgrade = false;
+                UpgradeNodes();
+            }
+        }
 
         private static void BeginZoomed(Rect rect, float zoom, float topPadding)
         {

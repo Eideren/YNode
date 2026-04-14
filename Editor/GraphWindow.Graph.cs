@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using Sirenix.OdinInspector.Editor;
 using UnityEditor;
 using UnityEngine;
@@ -19,7 +20,7 @@ namespace YNode.Editor
 
         public IReadOnlyDictionary<INodeValue, NodeEditor> NodesToEditor => _nodesToEditor;
 
-        [NonSerialized] private bool _ranLoad;
+        [NonSerialized] private bool _ranLoad, _hasTypesToUpgrade;
 
         protected virtual void Load()
         {
@@ -41,6 +42,61 @@ namespace YNode.Editor
             // Doing it afterward, that way ports init can use _nodesToEditor
             foreach (var (_, editor) in _nodesToEditor)
                 DrawNodeEditor(EventType.Layout, editor, false, new Color(), new Vector2());
+
+            var copy = _nodesToEditor.Keys.ToArray();
+            Task.Run(() =>
+            {
+                try
+                {
+                    var typesToUpgrade = NodeEditorReflection.NodeTypesToUpgrade;
+                    foreach (var node in copy)
+                    {
+                        if (typesToUpgrade.ContainsKey(node.GetType()))
+                        {
+                            _hasTypesToUpgrade = true;
+                            return;
+                        }
+                    }
+                }
+                catch (Exception e)
+                {
+                    Debug.LogException(e);
+                }
+            });
+        }
+
+        protected void UpgradeNodes()
+        {
+            using (new UndoGroup(nameof(UpgradeNodes)))
+            {
+                var copy = _nodesToEditor.ToArray();
+                var typesToUpgrade = NodeEditorReflection.NodeTypesToUpgrade;
+                foreach (var (node, editor) in copy)
+                {
+                    if (typesToUpgrade.TryGetValue(node.GetType(), out var to))
+                    {
+                        var replacement = CreateNode(to, node.Position, true);
+                        SwapConnection(editor, replacement);
+                        ((INodeUpgrader)replacement.Value).Replace(node);
+                        RemoveNode(editor, true);
+                    }
+                }
+            }
+        }
+
+        public void SwapConnection(NodeEditor from, NodeEditor to)
+        {
+            foreach (var (otherNode, otherEditor) in _nodesToEditor)
+            {
+                foreach (var (_, port) in otherEditor.ActivePorts)
+                {
+                    if (ReferenceEquals(port.Connected, from.Value))
+                    {
+                        if (port.TryConnectTo(to, true) == false)
+                            Debug.LogError($"Could not connect {otherNode} to {to} on port '{port.FieldName}'");
+                    }
+                }
+            }
         }
 
         protected virtual void OnEnable()

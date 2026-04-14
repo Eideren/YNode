@@ -14,10 +14,18 @@ namespace YNode.Editor
         [NonSerialized] private static Dictionary<Type, Color?>? s_nodeTint;
         [NonSerialized] private static Dictionary<Type, int>? s_nodeWidth;
 
-        [NonSerialized] private static Type[]? s_nodeTypes = null;
+        [NonSerialized] private static Type[]? s_nodeTypes = null, s_allNodeTypes = null;
+        [NonSerialized] private static Dictionary<Type, Type>? s_nodeTypesToUpgrade = null;
+
 
         /// <summary> All available node types </summary>
-        public static Type[] NodeTypes => s_nodeTypes ??= GetDerivedTypes(typeof(INodeValue));
+        public static Type[] NodeTypes => s_nodeTypes ??= AllNodeTypes.Where(x => NodeTypesToUpgrade.ContainsKey(x) == false).ToArray();
+
+        /// <summary> All available node types </summary>
+        public static Type[] AllNodeTypes => s_allNodeTypes ??= GetDerivedTypes(typeof(INodeValue));
+
+        /// <summary> All available node types </summary>
+        public static Dictionary<Type, Type> NodeTypesToUpgrade => s_nodeTypesToUpgrade ??= GetNodeTypesToUpgrade();
 
         /// <summary> Return a delegate used to determine whether window is docked or not. It is faster to cache this delegate than run the reflection required each time. </summary>
         public static Func<bool> GetIsDockedDelegate(this EditorWindow window)
@@ -70,6 +78,27 @@ namespace YNode.Editor
                 TA attrib = (TA)attribs[0];
                 dict.Add(NodeTypes[i], getter(attrib));
             }
+        }
+
+        public static Dictionary<Type, Type> GetNodeTypesToUpgrade()
+        {
+            var coll = new Dictionary<Type, Type>();
+            foreach (var nodeType in AllNodeTypes)
+            {
+                if (typeof(INodeUpgrader).IsAssignableFrom(nodeType) == false)
+                    continue;
+
+                foreach (Type @interface in nodeType.GetInterfaces())
+                {
+                    if (@interface.IsGenericType && @interface.GetGenericTypeDefinition() == typeof(INodeUpgrader<>))
+                    {
+                        coll[@interface.GetGenericArguments()[0]] = nodeType;
+                        break;
+                    }
+                }
+            }
+
+            return coll;
         }
 
         /// <summary> Get all classes deriving from baseType via reflection </summary>
