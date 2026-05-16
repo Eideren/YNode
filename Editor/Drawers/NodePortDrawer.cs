@@ -11,6 +11,7 @@ namespace YNode.Editor
     [DrawerPriority(90, 0, 0)]
     public sealed class NodePortDrawer<T> : OdinAttributeDrawer<T>, IDisposable where T : IOAttribute
     {
+        private NodeEditor? _boundEditor = null;
         private Port? _port = null;
         private SerializedProperty? _prop;
 
@@ -25,15 +26,15 @@ namespace YNode.Editor
             if (GraphWindow.InNodeEditor == false)
                 return;
 
-            var node = (NodeEditor)Property.Tree.WeakTargets[0];
-            _prop = node.SerializedObject.FindProperty(Property.UnityPropertyPath);
+            _boundEditor = (NodeEditor)Property.Tree.WeakTargets[0];
+            _prop = _boundEditor.SerializedObject.FindProperty(Property.UnityPropertyPath);
             if (_prop is null)
             {
-                Debug.LogWarning($"Could not find {Property.UnityPropertyPath} in {node}");
+                Debug.LogWarning($"Could not find {Property.UnityPropertyPath} in {_boundEditor}");
                 return;
             }
 
-            if (node.ActivePorts.ContainsKey(Property.UnityPropertyPath))
+            if (_boundEditor.ActivePorts.ContainsKey(Property.UnityPropertyPath))
             {
                 Debug.LogWarning("Multiple drawer for the same port ?");
                 return;
@@ -43,8 +44,8 @@ namespace YNode.Editor
             string tooltip = Property.GetAttribute<TooltipAttribute>()?.tooltip ?? valueType.Name;
             var attrib = Property.Attributes.GetAttribute<IOAttribute>();
             var io = attrib is OutputAttribute ? IO.Output : IO.Input;
-            _port = node.AddPort(Property.UnityPropertyPath, valueType, io, GetConnected, CanConnectTo, SetConnection, attrib.Stroke, tooltip);
-            node.Window.Repaint();
+            _port = _boundEditor.AddPort(Property.UnityPropertyPath, valueType, io, GetConnected, CanConnectTo, SetConnection, attrib.Stroke, tooltip);
+            _boundEditor.Window.Repaint();
 
             void SetConnection(INodeValue? newConnection)
             {
@@ -52,13 +53,24 @@ namespace YNode.Editor
                 // As odin is latent when it comes to assigning polymorphic fields to a type of value that's different from the existing one
 
                 _prop.managedReferenceValue = newConnection;
-                node.SerializedObject.ApplyModifiedProperties();
+                _boundEditor.SerializedObject.ApplyModifiedProperties();
             }
 
             INodeValue? GetConnected()
             {
-                node.SerializedObject.UpdateIfRequiredOrScript();
-                return (INodeValue?)_prop.managedReferenceValue;
+                _boundEditor.SerializedObject.UpdateIfRequiredOrScript();
+                try
+                {
+                    return (INodeValue?)_prop.managedReferenceValue;
+                }
+                catch (ObjectDisposedException)
+                {
+                    _boundEditor?.RemovePort(_port!, false, false);
+                    _boundEditor = null;
+                    _prop = null;
+                    _port = null;
+                    return null;
+                }
             }
 
             bool CanConnectTo(Type type) => valueType.IsAssignableFrom(type);
@@ -66,11 +78,10 @@ namespace YNode.Editor
 
         public void Dispose()
         {
-            if (GraphWindow.InNodeEditor) // We only care about dispose caused by changes in properties, other kinds should be handled by the graph editor
-            {
-                var node = (NodeEditor)Property.Tree.WeakTargets[0];
-                node.RemovePort(Property.UnityPropertyPath, false, false);
-            }
+            _boundEditor?.RemovePort(Property.UnityPropertyPath, false, false);
+            _boundEditor = null;
+            _prop = null;
+            _port = null;
         }
 
         protected override void DrawPropertyLayout(GUIContent label)
@@ -87,8 +98,7 @@ namespace YNode.Editor
             }
 
             Port port = _port ?? throw new NullReferenceException();
-            var node = (NodeEditor)Property.Tree.WeakTargets[0];
-            node.ActivePorts[Property.UnityPropertyPath] = port;
+            _boundEditor!.ActivePorts[Property.UnityPropertyPath] = port;
 
             if (Property.Tree.WeakTargets.Count > 1)
             {

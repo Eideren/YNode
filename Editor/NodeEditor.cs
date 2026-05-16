@@ -15,7 +15,6 @@ namespace YNode.Editor
     {
         public const int TitleHeight = 30;
 
-        private Dictionary<string, Port> _allPorts = new();
         private string? _title;
 
         [SkipPolymorphicField, SerializeReference, HideLabel, InlineProperty, ShowInInspector]
@@ -41,17 +40,7 @@ namespace YNode.Editor
         public Port AddPort(string fieldName, Type type, IO direction, GetConnected getConnected,
             CanConnectTo canConnectTo, SetConnection setConnection, NoodleStroke stroke, string? tooltip = null)
         {
-            if (_allPorts.Remove(fieldName, out var port)
-                && port.TryReuseFor(fieldName, this, type, direction, getConnected, canConnectTo, setConnection, stroke, tooltip))
-            {
-
-            }
-            else
-            {
-                port = new Port(fieldName, this, type, direction, getConnected, canConnectTo, setConnection, stroke, tooltip);
-            }
-
-            _allPorts.Add(fieldName, port);
+            var port = new Port(fieldName, this, type, direction, getConnected, canConnectTo, setConnection, stroke, tooltip);
             ActivePorts.Add(fieldName, port);
             return port;
         }
@@ -60,10 +49,7 @@ namespace YNode.Editor
         /// <summary> Remove a dynamic port from the node </summary>
         public void RemovePort(string fieldName, bool disconnect, bool undo)
         {
-            if (_allPorts.TryGetValue(fieldName, out var dynamicPort) == false)
-                throw new ArgumentException($"port {fieldName} doesn't exist");
-
-            RemovePort(dynamicPort, disconnect, undo);
+            RemovePort(ActivePorts[fieldName], disconnect, undo);
         }
 
         /// <summary> Remove a dynamic port from the node </summary>
@@ -71,7 +57,8 @@ namespace YNode.Editor
         {
             if (disconnect)
                 port.Disconnect(undo);
-            ActivePorts.Remove(port.FieldName);
+            if (ActivePorts.TryGetValue(port.FieldName, out var otherPort) && otherPort == port)
+                ActivePorts.Remove(port.FieldName);
             port.MarkRecycled();
         }
 
