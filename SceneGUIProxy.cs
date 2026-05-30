@@ -35,6 +35,54 @@ public class SceneGUIProxy
         }
     }
 
+    public Camera Camera
+    {
+        get
+        {
+#if UNITY_EDITOR
+            return UnityEditor.SceneView.currentDrawingSceneView.camera;
+#endif
+            return null;
+        }
+    }
+
+    public Vector2 Resolution
+    {
+        get
+        {
+#if UNITY_EDITOR
+            return UnityEditor.SceneView.currentDrawingSceneView.cameraViewport.size;
+#endif
+            return default;
+        }
+    }
+
+    public void Mesh(Mesh mesh)
+    {
+#if UNITY_EDITOR
+        Shader.SetGlobalFloat("_HandleSize", 1f);
+        Shader.SetGlobalMatrix("_ObjectToWorld", Matrix4x4.identity);
+        Shader.SetGlobalColor("_HandleColor", UnityEditor.Handles.color);
+        UnityEditor.HandleUtility.handleMaterial.SetFloat("_HandleZTest", (float) UnityEditor.Handles.zTest);
+        UnityEditor.HandleUtility.handleMaterial.color = UnityEngine.Color.white;
+        UnityEditor.HandleUtility.handleMaterial.SetPass(0);
+        Graphics.DrawMeshNow(mesh, UnityEditor.Handles.matrix);
+#endif
+    }
+
+    public bool Button(Vector3 position, float size = 0.1f)
+    {
+#if UNITY_EDITOR
+        var handleSize = UnityEditor.HandleUtility.GetHandleSize(position) * size;
+        if (UnityEditor.Handles.Button(position, Quaternion.identity, handleSize, handleSize, UnityEditor.Handles.SphereHandleCap))
+        {
+            RecordTrackedObject();
+            return true;
+        }
+#endif
+        return false;
+    }
+
     public Vector3 PositionHandle(Vector3 position, Quaternion rotation)
     {
         #if UNITY_EDITOR
@@ -148,7 +196,6 @@ public class SceneGUIProxy
         UnityEditor.HandleUtility.handleMaterial.SetFloat("_HandleZTest", (float)UnityEditor.Handles.zTest);
         UnityEditor.HandleUtility.handleMaterial.SetPass(0);*/
         Graphics.DrawMeshNow(s_SphereLines, UnityEditor.Handles.matrix * Matrix4x4.TRS(center, Quaternion.identity, Vector3.one * (radius * 2f)));
-
         #endif
     }
 
@@ -260,38 +307,68 @@ public class SceneGUIProxy
         }
     }
 
-    public TempState TempChanges() => new();
+    public GUISectionDisposable GUISection() => new();
 
-    public struct TempState : IDisposable
+    public struct GUISectionDisposable : IDisposable
     {
-        public readonly Color Color;
-        public readonly Color BackgroundColor;
-        public readonly Color ContentColor;
-        public readonly Color HandleColor;
-        public readonly bool Enabled;
-        public readonly Matrix4x4 Matrix;
-
-        public TempState()
+        public GUISectionDisposable()
         {
-            Color = GUI.color;
-            BackgroundColor = GUI.backgroundColor;
-            ContentColor = GUI.contentColor;
-            Enabled = GUI.enabled;
-            Matrix = GUI.matrix;
-            #if UNITY_EDITOR
-            HandleColor = UnityEditor.Handles.color;
-            #endif
+#if UNITY_EDITOR
+            UnityEditor.Handles.BeginGUI();
+#else
+            return;
+#endif
         }
 
         public void Dispose()
         {
-            GUI.color = Color;
-            GUI.backgroundColor = BackgroundColor;
-            GUI.contentColor = ContentColor;
-            GUI.enabled = Enabled;
-            GUI.matrix = Matrix;
+#if UNITY_EDITOR
+            UnityEditor.Handles.EndGUI();
+#else
+            return;
+#endif
+        }
+    }
+
+    public TempState TempChanges() => new();
+
+    public struct TempState : IDisposable
+    {
+        private CompareFunction? _zTest;
+        private Color? _color;
+        private Color? _backgroundColor;
+        private Color? _contentColor;
+        private Color? _handleColor;
+        private bool? _enabled;
+        private Matrix4x4? _matrix;
+        private Matrix4x4? _handleMatrix;
+
+        public Color? Color { set { _color ??= GUI.color; GUI.color = value ?? default; } }
+        public Color? BackgroundColor { set { _backgroundColor ??= GUI.backgroundColor; GUI.backgroundColor = value ?? default; } }
+        public Color? ContentColor { set { _contentColor ??= GUI.contentColor; GUI.contentColor = value ?? default; } }
+        public bool? Enabled { set { _enabled ??= GUI.enabled; GUI.enabled = value ?? default; } }
+        public Matrix4x4? Matrix { set { _matrix ??= GUI.matrix; GUI.matrix = value ?? default; } }
+#if UNITY_EDITOR
+        public CompareFunction? ZTest { set { _zTest ??= UnityEditor.Handles.zTest; UnityEditor.Handles.zTest = value ?? default; } }
+        public Color? HandleColor { set { _handleColor ??= UnityEditor.Handles.color; UnityEditor.Handles.color = value ?? default; } }
+        public Matrix4x4? HandleMatrix { set { _handleMatrix ??= UnityEditor.Handles.matrix; UnityEditor.Handles.matrix = value ?? default; } }
+#else
+        public CompareFunction? ZTest { set {  } }
+        public Color? HandleColor { set {  } }
+        public Matrix4x4? HandleMatrix { set {  } }
+#endif
+
+        public void Dispose()
+        {
+            if (_color.HasValue) GUI.color = _color.Value;
+            if (_backgroundColor.HasValue) GUI.backgroundColor = _backgroundColor.Value;
+            if (_contentColor.HasValue) GUI.contentColor = _contentColor.Value;
+            if (_enabled.HasValue) GUI.enabled = _enabled.Value;
+            if (_matrix.HasValue) GUI.matrix = _matrix.Value;
             #if UNITY_EDITOR
-            UnityEditor.Handles.color = HandleColor;
+            if (_zTest.HasValue) UnityEditor.Handles.zTest = _zTest.Value;
+            if (_handleColor.HasValue) UnityEditor.Handles.color = _handleColor.Value;
+            if (_handleMatrix.HasValue) UnityEditor.Handles.matrix = _handleMatrix.Value;
             #endif
         }
     }
