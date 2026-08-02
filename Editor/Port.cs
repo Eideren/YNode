@@ -60,25 +60,6 @@ namespace YNode.Editor
             }
         }
 
-        public bool TryReuseFor(string fieldName, NodeEditor nodeEditorParam, Type type, IO direction, GetConnected getConnected, CanConnectTo canConnectTo, SetConnection setConnection, NoodleStroke stroke, string? tooltip = null)
-        {
-            if (FieldName == fieldName &&
-                ValueType == type &&
-                Direction == direction &&
-                NodeEditor == nodeEditorParam &&
-                Stroke == stroke &&
-                Tooltip == (tooltip ?? ValueType.Name))
-            {
-                _getConnected = getConnected;
-                _canConnectTo = canConnectTo;
-                _setConnection = setConnection;
-                SampleConnected(); // Updates LooselyConnectedToThis
-                return true;
-            }
-
-            return false;
-        }
-
         public Port(string fieldName, NodeEditor nodeEditorParam, Type type, IO direction, GetConnected getConnected, CanConnectTo canConnectTo, SetConnection setConnection, NoodleStroke stroke, string? tooltip = null)
         {
             FieldName = fieldName;
@@ -144,7 +125,7 @@ namespace YNode.Editor
             NodeEditor.ReroutePoints.Remove(FieldName);
         }
 
-        public void MarkRecycled()
+        internal void Dispose()
         {
             _canConnectTo = null!;
             _getConnected = null!;

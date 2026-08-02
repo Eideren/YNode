@@ -45,13 +45,6 @@ namespace YNode.Editor
             return port;
         }
 
-
-        /// <summary> Remove a dynamic port from the node </summary>
-        public void RemovePort(string fieldName, bool disconnect, bool undo)
-        {
-            RemovePort(ActivePorts[fieldName], disconnect, undo);
-        }
-
         /// <summary> Remove a dynamic port from the node </summary>
         public void RemovePort(Port port, bool disconnect, bool undo)
         {
@@ -59,7 +52,7 @@ namespace YNode.Editor
                 port.Disconnect(undo);
             if (ActivePorts.TryGetValue(port.FieldName, out var otherPort) && otherPort == port)
                 ActivePorts.Remove(port.FieldName);
-            port.MarkRecycled();
+            port.Dispose();
         }
 
         /// <summary> Disconnect everything from this node </summary>

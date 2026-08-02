@@ -78,7 +78,8 @@ namespace YNode.Editor
 
         public void Dispose()
         {
-            _boundEditor?.RemovePort(Property.UnityPropertyPath, false, false);
+            if (_port is not null)
+                _boundEditor?.RemovePort(_port, false, false);
             _boundEditor = null;
             _prop = null;
             _port = null;
