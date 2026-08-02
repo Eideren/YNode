@@ -90,7 +90,7 @@ namespace YNode.Editor
                 return false;
 
             if (undo)
-                Undo.RegisterCompleteObjectUndo(NodeEditor.Graph, "Connect Port");
+                Undo.RecordObject(NodeEditor.Graph, "Connect Port");
 
             _setConnection(expectedValue);
             var currentValue = SampleConnected();

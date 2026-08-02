@@ -121,6 +121,23 @@ namespace YNode.Editor
         {
             try
             {
+                var nodeCache = new Dictionary<INodeValue, Vector2>();
+                var portCache = new Dictionary<(INodeValue, string), float>();
+                try
+                {
+                    foreach (var (_, editor) in _nodesToEditor)
+                    {
+                        nodeCache.Add(editor.Value, editor.CachedSize);
+                        foreach (var port in editor.ActivePorts)
+                            portCache[(editor.Value, port.Key)] = port.Value.LocalYOffset;
+                    }
+                }
+                catch (Exception e)
+                {
+                    // This can fail, just minor visual jump
+                    Debug.LogException(e);
+                }
+
                 // Almost works, some issues with redos
                 #if FALSE
                 Current = this;
@@ -169,6 +186,7 @@ namespace YNode.Editor
                 // See Load()
                 foreach (var (_, editor) in _nodesToEditor)
                 {
+                    InNodeEditor = editor;
                     try
                     {
                         editor.ObjectTree.BeginDraw(true);
@@ -177,9 +195,35 @@ namespace YNode.Editor
                     finally
                     {
                         editor.ObjectTree.EndDraw();
+                        InNodeEditor = null;
                     }
                 }
                 #endif
+
+                try
+                {
+                    foreach (var (_, editor) in _nodesToEditor)
+                    {
+                        if (nodeCache.TryGetValue(editor.Value, out var cachedSize))
+                        {
+                            editor.CachedSize = cachedSize;
+                            foreach (var port in editor.ActivePorts)
+                            {
+                                if (portCache.TryGetValue((editor.Value, port.Key), out var size))
+                                {
+                                    port.Value.LocalYOffset = size;
+                                }
+                            }
+                        }
+                    }
+                }
+                catch (Exception e)
+                {
+                    // This can fail, just minor visual jump
+                    Debug.LogException(e);
+                }
+
+                Repaint();
             }
             catch (Exception e)
             {
