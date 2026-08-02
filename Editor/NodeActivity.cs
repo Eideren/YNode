@@ -29,23 +29,27 @@ namespace YNode.Editor
     public class ConnectPortActivity : NodeActivity
     {
         public readonly Port Port;
+        private readonly NodeEditor _editor;
         private NodeEditor? _draggedOutputTarget;
 
         public ConnectPortActivity(Port port, GraphWindow window) : base(window)
         {
             Port = port;
-            if (Port.Connected is not null)
-            {
-                GUI.changed = true;
-                Port.Disconnect(true);
-                _draggedOutputTarget = Port.NodeEditor;
-            }
+            _editor = Port.NodeEditor;
         }
 
         public override void InputPreDraw(Event e)
         {
             switch (e.type)
             {
+                case EventType.KeyUp when e.keyCode == KeyCode.Escape:
+                    _draggedOutputTarget = null;
+                    GUI.changed = true;
+                    Window.CurrentActivity = null;
+                    Window.Repaint();
+                    e.Use();
+                    break;
+
                 case EventType.MouseDrag when e.button == 0:
                     // Set target even if we can't connect, so as to prevent auto-conn menu from opening erroneously
                     if (Window.HoveredNode != null && Port.Connected != Window.HoveredNode.Value && Port.CanConnectTo(Window.HoveredNode.Value.GetType()))
@@ -69,8 +73,6 @@ namespace YNode.Editor
                     break;
 
                 case EventType.MouseUp when e.button == 0:
-
-                    // If connection is valid, save it
                     if (_draggedOutputTarget != null && Port.CanConnectTo(_draggedOutputTarget.Value.GetType()))
                     {
                         Port.TryConnectTo(_draggedOutputTarget, true);
@@ -79,6 +81,7 @@ namespace YNode.Editor
                     else if (_draggedOutputTarget == null)
                     {
                         Port.ClearReroute();
+                        Port.Disconnect(true);
                         if (Preferences.GetSettings().DragToCreate)
                         {
                             var menu = new GenericMenu();
@@ -86,6 +89,14 @@ namespace YNode.Editor
                             menu.DropDown(new Rect(Event.current.mousePosition, Vector2.zero));
                         }
                     }
+                    else
+                    {
+                        Port.ClearReroute();
+                        Port.Disconnect(true);
+                    }
+
+                    // Have to do it like so since property drawer only updates after this whole thing runs
+                    EditorApplication.update += CarryYOffsetToNewPort;
 
                     //Release dragged connection
                     _draggedOutputTarget = null;
@@ -96,6 +107,12 @@ namespace YNode.Editor
 
                     break;
             }
+        }
+
+        private void CarryYOffsetToNewPort()
+        {
+            _editor.ActivePorts[Port.FieldName].LocalYOffset = Port.LocalYOffset;
+            EditorApplication.update -= CarryYOffsetToNewPort;
         }
 
         public override void PreNodeDraw()

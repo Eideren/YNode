@@ -550,6 +550,9 @@ namespace YNode.Editor
                         if (arrowRect.Contains(mousePos))
                             _hoveredPort = port;
 
+                        if (CurrentActivity is ConnectPortActivity portActivity && portActivity.Port == port)
+                            colorGradient = (Color.red, Color.red);
+
                         _noodlePosCache.Clear();
                         NoodleBuild(pathType, _gridPointsCache, _noodlePosCache);
 
