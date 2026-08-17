@@ -307,19 +307,16 @@ public class SceneGUIProxy
         }
     }
 
-    public GUISectionDisposable GUISection() => new();
+    public GUISectionDisposable GUISection()
+    {
+#if UNITY_EDITOR
+        UnityEditor.Handles.BeginGUI();
+#endif
+        return new GUISectionDisposable();
+    }
 
     public struct GUISectionDisposable : IDisposable
     {
-        public GUISectionDisposable()
-        {
-#if UNITY_EDITOR
-            UnityEditor.Handles.BeginGUI();
-#else
-            return;
-#endif
-        }
-
         public void Dispose()
         {
 #if UNITY_EDITOR

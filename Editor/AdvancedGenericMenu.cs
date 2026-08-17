@@ -96,10 +96,10 @@ namespace YNode.Editor
 
             static void RootDirectories(AdvancedDropdownItem item, AdvancedDropdownItem root, int rec)
             {
-                if (item.children.Any())
+                if (item.childList.Any())
                 {
                     root.AddChild(new AdvancedDropdownItem($"{new string(' ', rec*2)}{item.name}"){ enabled = false, icon = EditorGUIUtility.IconContent("d_Toolbar Minus").image as Texture2D });
-                    foreach (var advancedDropdownItem in item.children)
+                    foreach (var advancedDropdownItem in item.childList)
                     {
                         RootDirectories(advancedDropdownItem, root, rec+1);
                     }
@@ -141,7 +141,7 @@ namespace YNode.Editor
             }
             else
             {
-                item = currentRoot.children.OfType<AdvancedGenericMenuItem>().FirstOrDefault(x => x.name == paths[0]);
+                item = currentRoot.childList.OfType<AdvancedGenericMenuItem>().FirstOrDefault(x => x.name == paths[0]);
                 if (item == null)
                     currentRoot.AddChild(item = new AdvancedGenericMenuItem(paths[0]));
             }

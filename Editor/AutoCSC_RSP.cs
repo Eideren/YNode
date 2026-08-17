@@ -12,6 +12,7 @@ namespace YNode.Editor
     {
         static AutoCSC_RSP()
         {
+            return;
             Task.Run(ValidateCSCRSP);
             return;
 
@@ -24,7 +25,7 @@ namespace YNode.Editor
                         var fullPath = Path.Combine(Directory.GetParent(Application.dataPath)!.FullName, subDir);
                         foreach (string asmdefPath in Directory.EnumerateFiles(fullPath, "*.asmdef", SearchOption.AllDirectories))
                         {
-                            if (Regex.Match(File.ReadAllText(asmdefPath), """\"name\"\s*:\s*\"([^"]*)""") is not { } m || !m.Success)
+                            if (Regex.Match(File.ReadAllText(asmdefPath), @"\""name\""\s*:\s*\""([^""]*)") is not { } m || !m.Success)
                             {
                                 Debug.LogWarning($"Could not find assembly name in assembly definition at path {asmdefPath}");
                                 continue;

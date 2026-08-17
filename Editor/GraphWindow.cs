@@ -129,9 +129,9 @@ namespace YNode.Editor
         }
 
         [OnOpenAsset(0)]
-        public static bool OnOpen(int instanceID, int line)
+        public static bool OnOpen(EntityId entityId, int line)
         {
-            if (EditorUtility.InstanceIDToObject(instanceID) is NodeGraph nodeGraph)
+            if (EditorUtility.EntityIdToObject(entityId) is NodeGraph nodeGraph)
             {
                 Open(nodeGraph);
                 return true;

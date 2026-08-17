@@ -118,7 +118,7 @@ namespace YNode.Editor
 
                             if (!string.IsNullOrEmpty(name)
                                 && !string.IsNullOrEmpty(summary)
-                                && Regex.Match(name, """(F|P)\:(?<typename>([^."]*\.)*)(?<membername>[^\"]+)""") is {} m && m.Success)
+                                && Regex.Match(name, @"(F|P)\:(?<typename>([^.""]*\.)*)(?<membername>[^\""]+)") is {} m && m.Success)
                             {
                                 var type = m.Groups["typename"].ToString()[..^1];
                                 var membername = m.Groups["membername"].ToString();
