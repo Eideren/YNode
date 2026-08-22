@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using Unity.Scripting.LifecycleManagement;
 using UnityEngine;
 using UnityEngine.Rendering;
 using Object = UnityEngine.Object;
@@ -13,6 +14,7 @@ public class SceneGUIProxy
     private UnityEditor.IMGUI.Controls.BoxBoundsHandle m_BoundsHandle = new();
 #endif
 
+    [NoAutoStaticsCleanup]
     public static SceneGUIProxy Instance = new();
 
     private readonly Stack<AutoUndoer> _trackers = new();
@@ -41,8 +43,9 @@ public class SceneGUIProxy
         {
 #if UNITY_EDITOR
             return UnityEditor.SceneView.currentDrawingSceneView.camera;
-#endif
+#else
             return null;
+#endif
         }
     }
 
@@ -52,8 +55,9 @@ public class SceneGUIProxy
         {
 #if UNITY_EDITOR
             return UnityEditor.SceneView.currentDrawingSceneView.cameraViewport.size;
-#endif
+#else
             return default;
+#endif
         }
     }
 
@@ -226,7 +230,9 @@ public class SceneGUIProxy
         #endif
     }
 
+    [NoAutoStaticsCleanup]
     private static Mesh? s_SphereLines;
+    [NoAutoStaticsCleanup]
     private static Action<CompareFunction> s_ApplyWireMaterial, s_ApplyDottedWireMaterial;
 
     static Mesh ConvertToLineMesh(Mesh mesh)

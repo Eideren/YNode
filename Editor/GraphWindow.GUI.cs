@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using Sirenix.Utilities.Editor;
+using Unity.Scripting.LifecycleManagement;
 using UnityEditor;
 using UnityEngine;
 using YNode.Editor.Internal;
@@ -450,7 +451,7 @@ namespace YNode.Editor
             ArrayPool<Vector3>.Shared.Return(rVector3);
         }
 
-        private static readonly List<Vector3> _noodlePosCache = new();
+        [NoAutoStaticsCleanup] private static readonly List<Vector3> _noodlePosCache = new();
 
         /// <summary> Draw a bezier from output to input in grid coordinates </summary>
         public void DrawNoodle((Color a, Color b) gradient, NoodlePath path, NoodleStroke stroke, float thickness, List<Vector2> gridPoints)
@@ -463,7 +464,7 @@ namespace YNode.Editor
             NoodleDraw(gradient, _noodlePosCache, stroke, thickness);
         }
 
-        private static List<Vector2> _gridPointsCache = new();
+        [NoAutoStaticsCleanup] private static List<Vector2> _gridPointsCache = new();
 
         public bool GetPathFor(Port port, List<Vector2> workingList, out Rect boxWindowSpace, out float noodleThickness, out Vector2 endPosition)
         {

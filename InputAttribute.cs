@@ -2,11 +2,11 @@
 
 namespace YNode
 {
-    /// <summary> Mark a serializable field as an input port. You can access this through <see cref="Node.GetPort(string)" /> </summary>
+    /// <summary> Mark a serializable field as an input port. You can access this through NodeEditor.ActivePorts </summary>
     [AttributeUsage(AttributeTargets.Field)]
     public class InputAttribute : IOAttribute
     {
-        /// <summary> Mark a serializable field as an input port. You can access this through <see cref="Node.GetPort(string)" /> </summary>
+        /// <summary> Mark a serializable field as an input port. You can access this through NodeEditor.ActivePorts </summary>
         public InputAttribute() { }
     }
 }

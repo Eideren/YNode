@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Unity.Scripting.LifecycleManagement;
 using UnityEditor;
 using UnityEngine;
 using YNode.Editor.Internal;
@@ -10,7 +11,7 @@ namespace YNode.Editor
 {
     public partial class GraphWindow
     {
-        public static NodeEditor[] CopyBuffer = Array.Empty<NodeEditor>();
+        [NoAutoStaticsCleanup] public static NodeEditor[] CopyBuffer = Array.Empty<NodeEditor>();
 
         [NonSerialized] private NodeEditor? _hoveredNode = null;
         [NonSerialized] private Port? _hoveredPort = null;
@@ -409,6 +410,7 @@ namespace YNode.Editor
         public void PasteNodes(Vector2 pos)
         {
             InsertDuplicateNodes(CopyBuffer, pos);
+            Array.Clear(CopyBuffer, 0, CopyBuffer.Length);
         }
 
         private void InsertDuplicateNodes(NodeEditor[] nodes, Vector2 topLeft)

@@ -12,8 +12,8 @@ namespace YNode.Editor
 {
     public class AdvancedGenericMenu : AdvancedDropdown
     {
-        public static float? DefaultMinWidth = 200f;
-        public static float? DefaultMaxWidth = 300f;
+        public const float DefaultMinWidth = 200f;
+        public const float DefaultMaxWidth = 300f;
 
         private readonly string _name;
         private readonly List<AdvancedGenericMenuItem?> _items = new();
@@ -64,8 +64,7 @@ namespace YNode.Editor
         //     The position at which to show the menu.
         public void DropDown(Rect position)
         {
-            position.width = Mathf.Clamp(position.width, DefaultMinWidth.HasValue ? DefaultMinWidth.Value : 1f,
-                DefaultMaxWidth.HasValue ? DefaultMaxWidth.Value : Screen.width);
+            position.width = Mathf.Clamp(position.width, DefaultMinWidth, DefaultMaxWidth);
 
             Show(position);
             // Hide header bar from the drop down

@@ -8,6 +8,7 @@ using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Xml.Linq;
 using Sirenix.OdinInspector.Editor;
+using Unity.Scripting.LifecycleManagement;
 using UnityEditor;
 using UnityEngine;
 
@@ -88,7 +89,9 @@ namespace YNode.Editor
             return s_summaries.TryGetValue(key, out str);
         }
 
+        [NoAutoStaticsCleanup]
         private static readonly Dictionary<(string typeName, string memberName), string> s_summaries = new();
+        [NoAutoStaticsCleanup]
         private static bool s_done;
 
         static TooltipDrawer()

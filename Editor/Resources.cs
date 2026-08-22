@@ -1,17 +1,18 @@
-﻿using UnityEditor;
+﻿using Unity.Scripting.LifecycleManagement;
+using UnityEditor;
 using UnityEngine;
 
 namespace YNode.Editor
 {
     public static class Resources
     {
-        private static Texture2D? s_dot;
-        private static Texture2D? s_dotOuter;
-        private static Texture2D? s_nodeBody;
-        private static Texture2D? s_nodeHighlight;
-        private static Texture2D? s_tooltip;
+        [NoAutoStaticsCleanup] private static Texture2D? s_dot;
+        [NoAutoStaticsCleanup] private static Texture2D? s_dotOuter;
+        [NoAutoStaticsCleanup] private static Texture2D? s_nodeBody;
+        [NoAutoStaticsCleanup] private static Texture2D? s_nodeHighlight;
+        [NoAutoStaticsCleanup] private static Texture2D? s_tooltip;
 
-        private static StyleRepository? _styles;
+        [NoAutoStaticsCleanup] private static StyleRepository? _styles;
 
         // Textures
         public static Texture2D Dot => s_dot != null ? s_dot : s_dot = UnityEngine.Resources.Load<Texture2D>("xnode_dot");

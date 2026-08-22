@@ -9,13 +9,6 @@ namespace YNode
     }
 
     /// <summary> Derive from this class to create a SceneGraph with a specific graph type. </summary>
-    /// <example>
-    /// <code>
-    /// public class MySceneGraph : SceneGraph<MyGraph> {
-    ///
-    /// }
-    /// </code>
-    /// </example>
     public class SceneGraph<T> : SceneGraph where T : NodeGraph
     {
         public new T? graph

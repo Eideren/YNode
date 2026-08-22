@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using Unity.Scripting.LifecycleManagement;
 using UnityEditor;
 using UnityEngine;
 using Random = UnityEngine.Random;
@@ -17,13 +18,13 @@ namespace YNode.Editor
     public static class Preferences
     {
         /// <summary> The last editor we checked. This should be the one we modify </summary>
-        private static GraphWindow? s_lastEditor;
+        [NoAutoStaticsCleanup] private static GraphWindow? s_lastEditor;
 
         /// <summary> The last key we checked. This should be the one we modify </summary>
-        private static string s_lastKey = "xNode.Settings";
+        [NoAutoStaticsCleanup] private static string s_lastKey = "xNode.Settings";
 
-        private static Dictionary<Type, Color> s_typeColors = new Dictionary<Type, Color>();
-        private static Dictionary<string, Settings> s_settings = new Dictionary<string, Settings>();
+        [NoAutoStaticsCleanup] private static Dictionary<Type, Color> s_typeColors = new Dictionary<Type, Color>();
+        [NoAutoStaticsCleanup] private static Dictionary<string, Settings> s_settings = new Dictionary<string, Settings>();
 
         [Serializable]
         public class Settings : ISerializationCallbackReceiver

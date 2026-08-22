@@ -2,8 +2,10 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using Unity.Scripting.LifecycleManagement;
 using UnityEditor;
 using UnityEngine;
+using UnityEngine.Assemblies;
 using GenericMenu = YNode.Editor.AdvancedGenericMenu;
 
 namespace YNode.Editor
@@ -11,11 +13,11 @@ namespace YNode.Editor
     /// <summary> Contains reflection-related extensions built for xNode </summary>
     public static class NodeEditorReflection
     {
-        [NonSerialized] private static Dictionary<Type, Color?>? s_nodeTint;
-        [NonSerialized] private static Dictionary<Type, int>? s_nodeWidth;
+        [NonSerialized, NoAutoStaticsCleanup] private static Dictionary<Type, Color?>? s_nodeTint;
+        [NonSerialized, NoAutoStaticsCleanup] private static Dictionary<Type, int>? s_nodeWidth;
 
-        [NonSerialized] private static Type[]? s_nodeTypes = null, s_allNodeTypes = null;
-        [NonSerialized] private static Dictionary<Type, Type>? s_nodeTypesToUpgrade = null;
+        [NonSerialized, NoAutoStaticsCleanup] private static Type[]? s_nodeTypes = null, s_allNodeTypes = null;
+        [NonSerialized, NoAutoStaticsCleanup] private static Dictionary<Type, Type>? s_nodeTypesToUpgrade = null;
 
 
         /// <summary> All available node types </summary>
@@ -104,9 +106,8 @@ namespace YNode.Editor
         /// <summary> Get all classes deriving from baseType via reflection </summary>
         public static Type[] GetDerivedTypes(this Type baseType)
         {
-            List<Type> types = new List<Type>();
-            Assembly[] assemblies = AppDomain.CurrentDomain.GetAssemblies();
-            foreach (Assembly assembly in assemblies)
+            var types = new List<Type>();
+            foreach (Assembly assembly in CurrentAssemblies.GetLoadedAssemblies())
             {
                 try
                 {

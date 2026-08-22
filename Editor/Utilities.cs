@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Text;
+using Unity.Scripting.LifecycleManagement;
 using UnityEditor;
 using UnityEngine;
 using Object = UnityEngine.Object;
@@ -13,9 +14,9 @@ namespace YNode.Editor
     public static class Utilities
     {
         /// <summary>C#'s Script Icon [The one MonoBhevaiour Scripts have].</summary>
-        private static Texture2D scriptIcon = (Texture2D)EditorGUIUtility.IconContent("cs Script Icon").image;
+        [NoAutoStaticsCleanup] private static Texture2D scriptIcon = (Texture2D)EditorGUIUtility.IconContent("cs Script Icon").image;
 
-        private static Dictionary<Type, Type> _valueToEditor = new();
+        [NoAutoStaticsCleanup] private static Dictionary<Type, Type> _valueToEditor = new();
 
         public static Type GetCustomEditor(Type valueType, Type openGeneric, Type genericBase)
         {

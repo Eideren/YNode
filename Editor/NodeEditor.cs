@@ -4,6 +4,7 @@ using System.Reflection;
 using Sirenix.OdinInspector;
 using Sirenix.OdinInspector.Editor;
 using Sirenix.Utilities.Editor;
+using Unity.Scripting.LifecycleManagement;
 using UnityEditor;
 using UnityEngine;
 using GenericMenu = YNode.Editor.AdvancedGenericMenu;
@@ -26,7 +27,7 @@ namespace YNode.Editor
         [NonSerialized] public SerializedObject SerializedObject = null!;
         [NonSerialized] public PropertyTree ObjectTree = null!;
         [NonSerialized] public GraphWindow Window = null!;
-        public Dictionary<string, List<Vector2>> ReroutePoints = new();
+        [NonSerialized] public Dictionary<string, List<Vector2>> ReroutePoints = new();
 
         public NodeGraph Graph => Window.Graph;
 
@@ -213,7 +214,7 @@ namespace YNode.Editor
                     .CreateDelegate(typeof(Refl_AddCursorRect));
         }
 
-        private static readonly Refl_AddCursorRect? s_internalAddCursorRect;
+        [NoAutoStaticsCleanup] private static readonly Refl_AddCursorRect? s_internalAddCursorRect;
         delegate void Refl_AddCursorRect(Rect r, MouseCursor m, int controlID);
     }
 }
